@@ -47,6 +47,8 @@ supported meters from working.
 
 ## Installation
 
+Home Assistant 2026.4.0 or newer is required.
+
 ### HACS custom repository
 
 1. Open HACS and select **Integrations**.

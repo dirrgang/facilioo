@@ -1,4 +1,6 @@
 {
+  "country": "DE",
+  "homeassistant": "2026.4.0",
   "name": "Facilioo",
   "render_readme": true
 }
