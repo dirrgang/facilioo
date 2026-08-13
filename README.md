@@ -182,7 +182,7 @@ tokens, unredacted diagnostics, or personal meter identifiers to a public issue.
 
 ## Development
 
-Python 3.13 or newer is required. With [uv](https://docs.astral.sh/uv/):
+Python 3.14.2 or newer is required for development. With [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv sync --group dev
