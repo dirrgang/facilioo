@@ -4,10 +4,10 @@
   "codeowners": ["@dirrgang"],
   "config_flow": true,
   "dependencies": ["recorder"],
-  "documentation": "https://github.com/dirrgang/facilioo2ha",
+  "documentation": "https://github.com/dirrgang/facilioo",
   "integration_type": "service",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/dirrgang/facilioo2ha/issues",
+  "issue_tracker": "https://github.com/dirrgang/facilioo/issues",
   "requirements": [],
   "version": "0.2.0"
 }
