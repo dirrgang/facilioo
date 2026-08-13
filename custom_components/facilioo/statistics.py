@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from datetime import UTC, date, datetime
@@ -9,6 +10,7 @@ from decimal import Decimal
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from homeassistant.components.recorder import get_instance
 from homeassistant.components.recorder.models import (
     StatisticData,
     StatisticMeanType,
@@ -39,6 +41,8 @@ from .models import (
 
 _LOGGER = logging.getLogger(__name__)
 _INVALID_STATISTIC_KEY = re.compile(r"[^a-z0-9]+")
+_STATISTICS_LAYOUT_VERSION = 2
+_CLEAR_STATISTICS_TIMEOUT = 30
 
 
 def statistic_id(entry_id: str, kind: MeterKind, *, costs: bool = False) -> str:
@@ -53,6 +57,13 @@ def statistic_id(entry_id: str, kind: MeterKind, *, costs: bool = False) -> str:
     # ULIDs, while Recorder only accepts lowercase statistic ID slugs.
     entry_key = _INVALID_STATISTIC_KEY.sub("_", entry_id.casefold()).strip("_") or "entry"
     return f"{DOMAIN}:{entry_key}_{suffix}"
+
+
+def statistic_name(kind: MeterKind, *, costs: bool = False) -> str:
+    """Return a name that clearly distinguishes backfill from sensor statistics."""
+    source = "warm water" if kind is MeterKind.WARM_WATER else "heating"
+    value = "cost history" if costs else "consumption history"
+    return f"Facilioo {source} {value} (Energy Dashboard)"
 
 
 def _next_month(month: date) -> date:
@@ -127,9 +138,35 @@ class FaciliooStatisticsManager:
             hass, STORE_VERSION, f"{DOMAIN}.{entry.entry_id}.statistics"
         )
 
+    async def _async_clear_owned_statistics(self) -> bool:
+        """Clear this config entry's external series before a layout migration."""
+        done = asyncio.Event()
+
+        def on_done() -> None:
+            self.hass.loop.call_soon_threadsafe(done.set)
+
+        statistic_ids = [
+            statistic_id(self.entry.entry_id, kind, costs=costs)
+            for kind in (MeterKind.WARM_WATER, MeterKind.HEATING)
+            for costs in (False, True)
+        ]
+        get_instance(self.hass).async_clear_statistics(statistic_ids, on_done=on_done)
+        try:
+            async with asyncio.timeout(_CLEAR_STATISTICS_TIMEOUT):
+                await done.wait()
+        except TimeoutError:
+            _LOGGER.error("Timed out migrating Facilioo historical statistics")
+            return False
+        return True
+
     async def async_sync(self, data: ConsumptionData) -> None:
         saved = await self.store.async_load() or {"months": {}}
         saved_months = saved.get("months", {}) if isinstance(saved, dict) else {}
+        saved_layout = saved.get("layout_version") if isinstance(saved, dict) else None
+        if saved_months and saved_layout != _STATISTICS_LAYOUT_VERSION:
+            if not await self._async_clear_owned_statistics():
+                return
+            _LOGGER.info("Rebuilding Facilioo historical statistics after layout migration")
         next_months: dict[str, dict[str, str]] = {}
         meter_kinds = {meter.id: meter.kind for meter in data.meters}
         observed_by_kind: dict[MeterKind, set[date]] = {}
@@ -147,7 +184,7 @@ class FaciliooStatisticsManager:
                 MeterKind.WARM_WATER,
                 UnitOfVolume.CUBIC_METERS,
                 VolumeConverter.UNIT_CLASS,
-                "Facilioo warm water consumption",
+                statistic_name(MeterKind.WARM_WATER),
                 False,
                 MeterKind.WARM_WATER.value,
             ),
@@ -155,7 +192,7 @@ class FaciliooStatisticsManager:
                 MeterKind.HEATING,
                 UnitOfEnergy.KILO_WATT_HOUR,
                 EnergyConverter.UNIT_CLASS,
-                "Facilioo heating energy consumption",
+                statistic_name(MeterKind.HEATING),
                 False,
                 MeterKind.HEATING.value,
             ),
@@ -163,7 +200,7 @@ class FaciliooStatisticsManager:
                 MeterKind.WARM_WATER,
                 self.hass.config.currency,
                 None,
-                "Facilioo warm water costs",
+                statistic_name(MeterKind.WARM_WATER, costs=True),
                 True,
                 f"{MeterKind.WARM_WATER.value}_costs",
             ),
@@ -171,7 +208,7 @@ class FaciliooStatisticsManager:
                 MeterKind.HEATING,
                 self.hass.config.currency,
                 None,
-                "Facilioo heating costs",
+                statistic_name(MeterKind.HEATING, costs=True),
                 True,
                 f"{MeterKind.HEATING.value}_costs",
             ),
@@ -211,5 +248,7 @@ class FaciliooStatisticsManager:
                 next_months[store_key] = previous
             else:
                 next_months[store_key] = stored
-        await self.store.async_save({"months": next_months})
+        await self.store.async_save(
+            {"layout_version": _STATISTICS_LAYOUT_VERSION, "months": next_months}
+        )
         _LOGGER.debug("Facilioo historical statistics synchronized")

@@ -4,7 +4,7 @@ from datetime import timedelta
 
 DOMAIN = "facilioo"
 NAME = "Facilioo"
-VERSION = "0.1.2"
+VERSION = "0.1.5"
 
 BASE_URL = "https://api.facilioo.de"
 API_VERSION = "2.0"
@@ -18,6 +18,7 @@ CONF_PASSWORD = "password"
 PLATFORMS = ["sensor"]
 UPDATE_INTERVAL = timedelta(days=1)
 REQUEST_TIMEOUT = 30
+PAGE_SIZE = 100
 
 TYPE_HEATING = 4
 TYPE_WARM_WATER = 5

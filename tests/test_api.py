@@ -107,6 +107,37 @@ async def test_pagination_requests_every_page(meter_payload):
 
 
 @pytest.mark.asyncio
+async def test_pagination_uses_received_count_when_server_caps_page_size():
+    first = {"items": [{"id": item} for item in range(100)], "totalCount": 150}
+    second = {"items": [{"id": item} for item in range(100, 150)], "totalCount": 150}
+    session = FakeSession([FakeResponse(first), FakeResponse(second)])
+    client = FaciliooApiClient(session, "x", "y")
+    client._token = "token"
+
+    items = await client._paginate("/api/consumption-readings", page_size=1000)
+
+    assert len(items) == 150
+    assert session.calls[1][2]["params"]["PageNumber"] == 2
+
+
+@pytest.mark.asyncio
+async def test_reading_endpoints_request_supported_page_size():
+    session = FakeSession(
+        [
+            FakeResponse({"items": [], "totalCount": 0}),
+            FakeResponse({"items": [], "totalCount": 0}),
+        ]
+    )
+    client = FaciliooApiClient(session, "x", "y")
+    client._token = "token"
+
+    await client.async_get_readings()
+    await client.async_get_extended_readings()
+
+    assert [call[2]["params"]["PageSize"] for call in session.calls] == [100, 100]
+
+
+@pytest.mark.asyncio
 async def test_aiohttp_error_is_connection_error():
     client = FaciliooApiClient(FakeSession([aiohttp.ClientError()]), "x", "y")
     with pytest.raises(FaciliooConnectionError):

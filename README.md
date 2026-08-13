@@ -79,16 +79,25 @@ The **Warm water total** sensor is a valid Home Assistant water sensor (`device_
 
 **Settings → Dashboards → Energy → Water consumption**
 
-For correct pre-installation history, select the external statistic named **Facilioo warm water
-consumption** when it is offered by the statistic picker. Heating history is published as
-**Facilioo heating energy consumption** and is not automatically categorized as grid electricity.
+For correct pre-installation history, select only the external statistic named **Facilioo warm
+water consumption history (Energy Dashboard)** when it is offered by the statistic picker. Do not
+add both that statistic and the **Warm water total** entity as separate water sources, because they
+represent the same data and would be counted twice. Heating history is published as **Facilioo
+heating consumption history (Energy Dashboard)** and is not automatically categorized as grid
+electricity.
 
-When Facilioo supplies monthly costs, the integration also publishes **Facilioo warm water
-costs** and **Facilioo heating costs** as independent cumulative external statistics in Home
-Assistant's configured currency. The warm-water cost statistic can be selected as the cost
-statistic for the corresponding water source in the Energy Dashboard. Missing cost fields do not
-erase a previously imported amount; a newer reading explicitly marked as deleted does remove its
-month from both cumulative histories.
+The external history is a Recorder statistic, not a second Home Assistant entity. Home Assistant
+shows entity statistics and external statistics in the same picker even though they have different
+technical origins. The normal total entity provides a current state for automations and cards; the
+external statistic is necessary for authoritative pre-installation backfill and corrections. Home
+Assistant does not offer a supported way to inject that backfill into the native entity statistic
+without letting the sensor compiler continue it from a conflicting baseline.
+
+When Facilioo supplies monthly costs, the integration also publishes clearly labelled warm-water
+and heating **cost history (Energy Dashboard)** statistics in Home Assistant's configured currency.
+The warm-water cost statistic can be selected as the cost statistic for the corresponding water
+source. Missing cost fields do not erase a previously imported amount; a newer reading explicitly
+marked as deleted does remove its month from both cumulative histories.
 
 ### Why the backfill is an external statistic
 
@@ -116,6 +125,11 @@ and `1.438`. A repeated sync submits the same keys and values, so Recorder updat
 duplicates them. If an old month changes or is deleted, the complete cumulative sequence is
 recomputed and the affected boundaries are overwritten. No SQL, database-specific code, or
 `.storage` manipulation is used.
+
+Version 0.1.5 performs a one-time rebuild of only this config entry's external Facilioo series.
+This removes incorrectly placed experimental month-end points written by version 0.1.3 and then
+immediately imports the authoritative monthly sequence again. Other Recorder statistics and the
+native sensor history are not modified.
 
 ## Time zones
 

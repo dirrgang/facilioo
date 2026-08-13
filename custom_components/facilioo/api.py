@@ -16,6 +16,7 @@ from .const import (
     EXTENDED_READINGS_ENDPOINT,
     LOGIN_ENDPOINT,
     METERS_ENDPOINT,
+    PAGE_SIZE,
     READINGS_ENDPOINT,
     REQUEST_TIMEOUT,
 )
@@ -84,15 +85,15 @@ class FaciliooApiClient:
         self._token = token
 
     async def async_get_meters(self) -> tuple[ConsumptionMeter, ...]:
-        raw = await self._paginate(METERS_ENDPOINT, page_size=100)
+        raw = await self._paginate(METERS_ENDPOINT, page_size=PAGE_SIZE)
         return self._parse_items(raw, ConsumptionMeter.from_api, "meter")
 
     async def async_get_readings(self) -> tuple[ConsumptionReading, ...]:
-        raw = await self._paginate(READINGS_ENDPOINT, page_size=1000)
+        raw = await self._paginate(READINGS_ENDPOINT, page_size=PAGE_SIZE)
         return self._parse_items(raw, ConsumptionReading.from_api, "reading")
 
     async def async_get_extended_readings(self) -> tuple[ConsumptionReading, ...]:
-        raw = await self._paginate(EXTENDED_READINGS_ENDPOINT, page_size=1000)
+        raw = await self._paginate(EXTENDED_READINGS_ENDPOINT, page_size=PAGE_SIZE)
         return self._parse_items(raw, ConsumptionReading.from_api, "reading")
 
     async def async_fetch_all(
@@ -115,7 +116,7 @@ class FaciliooApiClient:
             payload = await self._request(
                 "GET", endpoint, params={"PageSize": page_size, "PageNumber": page}
             )
-            page_items, has_next = self._page(payload, page, page_size)
+            page_items, has_next = self._page(payload, page, page_size, items_seen=len(items))
             items.extend(item for item in page_items if isinstance(item, Mapping))
             if not has_next:
                 return items
@@ -123,7 +124,9 @@ class FaciliooApiClient:
         raise FaciliooResponseError("Pagination exceeded the safety limit")
 
     @staticmethod
-    def _page(payload: Any, page: int, page_size: int) -> tuple[list[Any], bool]:
+    def _page(
+        payload: Any, page: int, page_size: int, *, items_seen: int = 0
+    ) -> tuple[list[Any], bool]:
         if isinstance(payload, list):
             return payload, len(payload) == page_size
         if not isinstance(payload, Mapping):
@@ -145,7 +148,7 @@ class FaciliooApiClient:
             return page_items, page < total_pages
         total = payload.get("totalCount") or payload.get("count")
         if isinstance(total, int):
-            return page_items, page * page_size < total
+            return page_items, items_seen + len(page_items) < total
         return page_items, len(page_items) == page_size
 
     @staticmethod

@@ -1,10 +1,24 @@
 """Tests for exact idempotent historical series construction."""
 
-from datetime import date
+import asyncio
+from datetime import UTC, date, datetime
 from decimal import Decimal
+from types import SimpleNamespace
 
-from custom_components.facilioo.models import MeterKind, MonthlyConsumption
-from custom_components.facilioo.statistics import build_statistics, statistic_id
+import pytest
+
+import custom_components.facilioo.statistics as statistics_module
+from custom_components.facilioo.models import (
+    ConsumptionData,
+    MeterKind,
+    MonthlyConsumption,
+)
+from custom_components.facilioo.statistics import (
+    FaciliooStatisticsManager,
+    build_statistics,
+    statistic_id,
+    statistic_name,
+)
 
 
 def month(value: str, when: date, estimated: bool = False) -> MonthlyConsumption:
@@ -134,3 +148,57 @@ def test_cost_statistic_id_is_normalized_and_account_specific():
     assert statistic_id("01K2N-ABC", MeterKind.WARM_WATER, costs=True) == (
         "facilioo:01k2n_abc_warm_water_costs"
     )
+
+
+def test_external_statistic_names_are_unambiguous_energy_history():
+    assert statistic_name(MeterKind.WARM_WATER) == (
+        "Facilioo warm water consumption history (Energy Dashboard)"
+    )
+    assert statistic_name(MeterKind.HEATING, costs=True) == (
+        "Facilioo heating cost history (Energy Dashboard)"
+    )
+
+
+@pytest.mark.asyncio
+async def test_layout_migration_clears_only_owned_series_once(monkeypatch):
+    class MemoryStore:
+        saved = {"months": {"warm_water": {"2025-11-01": "0.172"}}}
+
+        async def async_load(self):
+            return self.saved
+
+        async def async_save(self, data):
+            self.saved = data
+
+    cleared = []
+
+    class FakeRecorder:
+        def async_clear_statistics(self, statistic_ids, *, on_done):
+            cleared.append(statistic_ids)
+            on_done()
+
+    monkeypatch.setattr(statistics_module, "get_instance", lambda hass: FakeRecorder())
+    monkeypatch.setattr(
+        statistics_module, "async_add_external_statistics", lambda hass, metadata, stats: None
+    )
+    manager = object.__new__(FaciliooStatisticsManager)
+    manager.hass = SimpleNamespace(
+        loop=asyncio.get_running_loop(),
+        config=SimpleNamespace(time_zone="Europe/Berlin", currency="EUR"),
+    )
+    manager.entry = SimpleNamespace(entry_id="01K2NABC")
+    manager.store = MemoryStore()
+    data = ConsumptionData((), (), {}, datetime.now(UTC))
+
+    await manager.async_sync(data)
+    await manager.async_sync(data)
+
+    assert cleared == [
+        [
+            statistic_id("01K2NABC", MeterKind.WARM_WATER),
+            statistic_id("01K2NABC", MeterKind.WARM_WATER, costs=True),
+            statistic_id("01K2NABC", MeterKind.HEATING),
+            statistic_id("01K2NABC", MeterKind.HEATING, costs=True),
+        ]
+    ]
+    assert manager.store.saved["layout_version"] == 2

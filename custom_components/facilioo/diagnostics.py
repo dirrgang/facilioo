@@ -25,4 +25,8 @@ async def async_get_config_entry_diagnostics(
         "meter_count": len(data.meters),
         "reading_count": len(data.readings),
         "months": {kind.value: len(values) for kind, values in data.monthly.items()},
+        "billing_months": {
+            kind.value: [value.month.isoformat()[:7] for value in values]
+            for kind, values in data.monthly.items()
+        },
     }
