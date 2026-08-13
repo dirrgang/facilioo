@@ -60,10 +60,14 @@ def statistic_id(entry_id: str, kind: MeterKind, *, costs: bool = False) -> str:
 
 
 def statistic_name(kind: MeterKind, *, costs: bool = False) -> str:
-    """Return a name that clearly distinguishes backfill from sensor statistics."""
-    source = "warm water" if kind is MeterKind.WARM_WATER else "heating"
+    """Return a name describing the external series' actual UI role."""
+    if kind is MeterKind.WARM_WATER:
+        value = "cost history" if costs else "consumption history"
+        role = "water cost" if costs else "water source"
+        return f"Facilioo warm water {value} (Energy Dashboard {role})"
     value = "cost history" if costs else "consumption history"
-    return f"Facilioo {source} {value} (Energy Dashboard)"
+    role = "gas cost" if costs else "gas source"
+    return f"Facilioo heating {value} (Energy Dashboard {role})"
 
 
 def _next_month(month: date) -> date:

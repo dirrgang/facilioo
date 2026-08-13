@@ -35,14 +35,14 @@
   },
   "entity": {
     "sensor": {
-      "warm_water_total": {"name": "Warm water total"},
-      "heating_energy_total": {"name": "Heating energy total"},
-      "warm_water_last_month": {"name": "Warm water last month"},
-      "heating_energy_last_month": {"name": "Heating energy last month"},
-      "warm_water_cost_last_month": {"name": "Warm water cost last month"},
-      "heating_cost_last_month": {"name": "Heating cost last month"},
-      "warm_water_cost_total": {"name": "Warm water cost total"},
-      "heating_cost_total": {"name": "Heating cost total"}
+      "warm_water_total": {"name": "Warm water — cumulative total"},
+      "heating_energy_total": {"name": "Heating energy — cumulative total"},
+      "warm_water_last_month": {"name": "Warm water — latest billing month"},
+      "heating_energy_last_month": {"name": "Heating energy — latest billing month"},
+      "warm_water_cost_last_month": {"name": "Warm water cost — latest billing month"},
+      "heating_cost_last_month": {"name": "Heating cost — latest billing month"},
+      "warm_water_cost_total": {"name": "Warm water cost — cumulative total"},
+      "heating_cost_total": {"name": "Heating cost — cumulative total"}
     }
   }
 }

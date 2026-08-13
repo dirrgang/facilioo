@@ -6,6 +6,12 @@ from decimal import Decimal
 from types import SimpleNamespace
 
 import pytest
+from homeassistant.components.energy.validate import (
+    GAS_USAGE_DEVICE_CLASSES,
+    GAS_USAGE_UNITS,
+)
+from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.const import UnitOfEnergy
 
 import custom_components.facilioo.statistics as statistics_module
 from custom_components.facilioo.models import (
@@ -152,11 +158,19 @@ def test_cost_statistic_id_is_normalized_and_account_specific():
 
 def test_external_statistic_names_are_unambiguous_energy_history():
     assert statistic_name(MeterKind.WARM_WATER) == (
-        "Facilioo warm water consumption history (Energy Dashboard)"
+        "Facilioo warm water consumption history (Energy Dashboard water source)"
     )
     assert statistic_name(MeterKind.HEATING, costs=True) == (
-        "Facilioo heating cost history (Energy Dashboard)"
+        "Facilioo heating cost history (Energy Dashboard gas cost)"
     )
+    assert statistic_name(MeterKind.HEATING) == (
+        "Facilioo heating consumption history (Energy Dashboard gas source)"
+    )
+
+
+def test_heating_energy_is_valid_for_home_assistant_gas_source():
+    assert SensorDeviceClass.ENERGY in GAS_USAGE_DEVICE_CLASSES
+    assert UnitOfEnergy.KILO_WATT_HOUR in GAS_USAGE_UNITS[SensorDeviceClass.ENERGY]
 
 
 @pytest.mark.asyncio

@@ -33,12 +33,12 @@ Entities are created only when the corresponding source meter exists:
 
 | Entity name | Meaning | Default |
 | --- | --- | --- |
-| Warm water total | Sum of all valid monthly warm-water readings | Enabled |
-| Heating energy total | Sum of all valid monthly heating readings | Enabled |
-| Warm water last month | Newest monthly value | Enabled |
-| Heating energy last month | Newest monthly value | Enabled |
-| Warm-water/heating cost last month | Newest monthly cost | Enabled |
-| Warm-water/heating cost total | Sum of available costs | Disabled |
+| Warm water — cumulative total | Sum of all valid monthly warm-water readings | Enabled |
+| Heating energy — cumulative total | Sum of all valid monthly heating readings | Enabled |
+| Warm water — latest billing month | Newest monthly value | Enabled |
+| Heating energy — latest billing month | Newest monthly value | Enabled |
+| Warm-water/heating cost — latest billing month | Newest monthly cost | Enabled |
+| Warm-water/heating cost — cumulative total | Sum of available costs | Disabled |
 
 No cold-water entity is invented. Unknown meter types and units are ignored without preventing
 supported meters from working.
@@ -80,11 +80,14 @@ The **Warm water total** sensor is a valid Home Assistant water sensor (`device_
 **Settings → Dashboards → Energy → Water consumption**
 
 For correct pre-installation history, select only the external statistic named **Facilioo warm
-water consumption history (Energy Dashboard)** when it is offered by the statistic picker. Do not
-add both that statistic and the **Warm water total** entity as separate water sources, because they
-represent the same data and would be counted twice. Heating history is published as **Facilioo
-heating consumption history (Energy Dashboard)** and is not automatically categorized as grid
-electricity.
+water consumption history (Energy Dashboard water source)** when it is offered by the statistic
+picker. Do not add both that statistic and the **Warm water total** entity as separate water
+sources, because they represent the same data and would be counted twice. Heating history is
+published as **Facilioo heating consumption history (Energy Dashboard gas source)**. Add it as a
+**Gas consumption** source and choose **Facilioo heating cost history (Energy Dashboard gas cost)**
+as its cost statistic. Home Assistant explicitly accepts energy-class statistics in kWh for a gas
+source, so the integration keeps the technically correct `energy` device class and does not pretend
+that the Facilioo value is a physical gas-volume reading.
 
 The external history is a Recorder statistic, not a second Home Assistant entity. Home Assistant
 shows entity statistics and external statistics in the same picker even though they have different
@@ -93,11 +96,11 @@ external statistic is necessary for authoritative pre-installation backfill and 
 Assistant does not offer a supported way to inject that backfill into the native entity statistic
 without letting the sensor compiler continue it from a conflicting baseline.
 
-When Facilioo supplies monthly costs, the integration also publishes clearly labelled warm-water
-and heating **cost history (Energy Dashboard)** statistics in Home Assistant's configured currency.
-The warm-water cost statistic can be selected as the cost statistic for the corresponding water
-source. Missing cost fields do not erase a previously imported amount; a newer reading explicitly
-marked as deleted does remove its month from both cumulative histories.
+When Facilioo supplies monthly costs, the integration also publishes separate cumulative cost
+statistics in Home Assistant's configured currency. Warm-water costs are labelled **Energy
+Dashboard water cost** and heating costs **Energy Dashboard gas cost**; each can be assigned to its
+corresponding source. Missing cost fields do not erase a previously imported amount; a newer reading
+explicitly marked as deleted removes its month from both cumulative histories.
 
 ### Why the backfill is an external statistic
 
