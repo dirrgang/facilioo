@@ -12,12 +12,6 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 
 @pytest.fixture
-def facilioo_hass(recorder_mock, enable_custom_integrations, hass):
-    """Return Home Assistant after Recorder and custom integrations are ready."""
-    return hass
-
-
-@pytest.fixture
 def meter_payload() -> dict[str, Any]:
     return json.loads((FIXTURES / "meters.json").read_text(encoding="utf-8"))
 

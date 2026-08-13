@@ -7,7 +7,6 @@ __pycache__/
 .mypy_cache/
 .venv/
 venv/
-uv.lock
 htmlcov/
 coverage.xml
 .idea/

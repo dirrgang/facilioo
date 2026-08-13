@@ -191,6 +191,9 @@ uv run ruff check .
 uv run ruff format --check .
 ```
 
+The Home Assistant test harness targets Linux. On Windows, run the commands in WSL or another
+Linux environment; a native Windows run cannot import Home Assistant's Unix-only runtime modules.
+
 All HTTP tests use mocks. No productive Facilioo or Home Assistant system is contacted.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
