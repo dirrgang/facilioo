@@ -26,4 +26,6 @@ UNIT_M3 = "M3"
 
 STATISTIC_WARM_WATER = "warm_water_consumption"
 STATISTIC_HEATING = "heating_energy_consumption"
+STATISTIC_WARM_WATER_COSTS = "warm_water_costs"
+STATISTIC_HEATING_COSTS = "heating_costs"
 STORE_VERSION = 1

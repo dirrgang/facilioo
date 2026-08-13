@@ -25,7 +25,9 @@ from homeassistant.util.unit_conversion import EnergyConverter, VolumeConverter
 from .const import (
     DOMAIN,
     STATISTIC_HEATING,
+    STATISTIC_HEATING_COSTS,
     STATISTIC_WARM_WATER,
+    STATISTIC_WARM_WATER_COSTS,
     STORE_VERSION,
 )
 from .models import ConsumptionData, MeterKind, MonthlyConsumption, billing_month
@@ -34,9 +36,16 @@ _LOGGER = logging.getLogger(__name__)
 _INVALID_STATISTIC_KEY = re.compile(r"[^a-z0-9]+")
 
 
-def statistic_id(entry_id: str, kind: MeterKind) -> str:
+def statistic_id(entry_id: str, kind: MeterKind, *, costs: bool = False) -> str:
     """Return an account-specific stable external statistic ID."""
-    suffix = STATISTIC_WARM_WATER if kind is MeterKind.WARM_WATER else STATISTIC_HEATING
+    if costs:
+        suffix = (
+            STATISTIC_WARM_WATER_COSTS
+            if kind is MeterKind.WARM_WATER
+            else STATISTIC_HEATING_COSTS
+        )
+    else:
+        suffix = STATISTIC_WARM_WATER if kind is MeterKind.WARM_WATER else STATISTIC_HEATING
     # Config entry IDs are opaque. Newer Home Assistant versions may use uppercase
     # ULIDs, while Recorder only accepts lowercase statistic ID slugs.
     entry_key = _INVALID_STATISTIC_KEY.sub("_", entry_id.casefold()).strip("_") or "entry"
@@ -64,9 +73,17 @@ def build_statistics(
     previous: dict[str, str],
     time_zone: str,
     observed_months: set[date] | None = None,
+    *,
+    costs: bool = False,
 ) -> tuple[list[StatisticData], dict[str, str]]:
     """Build an exact cumulative series without erasing transiently omitted data."""
-    current_values = {item.month.isoformat(): item.value for item in current}
+    current_values = {
+        item.month.isoformat(): item.costs if costs else item.value
+        for item in current
+        if not costs or item.costs is not None
+    }
+    if costs and not current_values and not previous:
+        return [], {}
     observed = observed_months or {item.month for item in current}
     values: dict[str, Decimal | str] = dict(previous)
     for month in observed:
@@ -113,46 +130,75 @@ class FaciliooStatisticsManager:
         next_months: dict[str, dict[str, str]] = {}
         meter_kinds = {meter.id: meter.kind for meter in data.meters}
         observed_by_kind: dict[MeterKind, set[date]] = {}
+        observed_costs_by_kind: dict[MeterKind, set[date]] = {}
         for reading in data.readings:
             if (kind := meter_kinds.get(reading.meter_id)) in (
                 MeterKind.WARM_WATER,
                 MeterKind.HEATING,
             ):
-                observed_by_kind.setdefault(kind, set()).add(
-                    billing_month(reading.reading_date, self.hass.config.time_zone)
-                )
-        for kind, unit, unit_class, name in (
+                month = billing_month(reading.reading_date, self.hass.config.time_zone)
+                observed_by_kind.setdefault(kind, set()).add(month)
+                if reading.costs is not None or reading.deleted:
+                    observed_costs_by_kind.setdefault(kind, set()).add(month)
+        for kind, unit, unit_class, name, is_costs, store_key in (
             (
                 MeterKind.WARM_WATER,
                 UnitOfVolume.CUBIC_METERS,
                 VolumeConverter.UNIT_CLASS,
                 "Facilioo warm water consumption",
+                False,
+                MeterKind.WARM_WATER.value,
             ),
             (
                 MeterKind.HEATING,
                 UnitOfEnergy.KILO_WATT_HOUR,
                 EnergyConverter.UNIT_CLASS,
                 "Facilioo heating energy consumption",
+                False,
+                MeterKind.HEATING.value,
+            ),
+            (
+                MeterKind.WARM_WATER,
+                self.hass.config.currency,
+                None,
+                "Facilioo warm water costs",
+                True,
+                f"{MeterKind.WARM_WATER.value}_costs",
+            ),
+            (
+                MeterKind.HEATING,
+                self.hass.config.currency,
+                None,
+                "Facilioo heating costs",
+                True,
+                f"{MeterKind.HEATING.value}_costs",
             ),
         ):
-            previous = saved_months.get(kind.value, {})
+            previous = saved_months.get(store_key, {})
             if not isinstance(previous, dict):
                 previous = {}
             stats, stored = build_statistics(
                 data.values(kind),
                 previous,
                 self.hass.config.time_zone,
-                observed_by_kind.get(kind, set()),
+                (
+                    observed_costs_by_kind.get(kind, set())
+                    if is_costs
+                    else observed_by_kind.get(kind, set())
+                ),
+                costs=is_costs,
             )
             if not stats:
-                next_months[kind.value] = stored
+                next_months[store_key] = stored
                 continue
             metadata: StatisticMetaData = {
                 "mean_type": StatisticMeanType.NONE,
                 "has_sum": True,
                 "name": name,
                 "source": DOMAIN,
-                "statistic_id": statistic_id(self.entry.entry_id, kind),
+                "statistic_id": statistic_id(
+                    self.entry.entry_id, kind, costs=is_costs
+                ),
                 "unit_class": unit_class,
                 "unit_of_measurement": unit,
             }
@@ -161,9 +207,9 @@ class FaciliooStatisticsManager:
             except HomeAssistantError as err:
                 # Historical import is additive functionality. Recorder rejecting a
                 # batch must not prevent the regular Facilioo entities from loading.
-                _LOGGER.error("Unable to import Facilioo %s history: %s", kind.value, err)
-                next_months[kind.value] = previous
+                _LOGGER.error("Unable to import Facilioo %s history: %s", store_key, err)
+                next_months[store_key] = previous
             else:
-                next_months[kind.value] = stored
+                next_months[store_key] = stored
         await self.store.async_save({"months": next_months})
         _LOGGER.debug("Facilioo historical statistics synchronized")
