@@ -15,7 +15,8 @@ facilioo or MÜNCH.
 - Heating energy in kWh
 - Latest monthly costs in Home Assistant's configured currency
 - Cumulative total sensors with `state_class: total`
-- Historical monthly backfill through Home Assistant's supported Recorder statistics API
+- Historical consumption and cost backfill through Home Assistant's supported Recorder
+  statistics API
 - Idempotent daily synchronization (one poll per day)
 - Rewrites historical points when Facilioo corrects or deletes a reading
 - Estimated-reading status on latest-month sensors
@@ -82,6 +83,13 @@ For correct pre-installation history, select the external statistic named **Faci
 consumption** when it is offered by the statistic picker. Heating history is published as
 **Facilioo heating energy consumption** and is not automatically categorized as grid electricity.
 
+When Facilioo supplies monthly costs, the integration also publishes **Facilioo warm water
+costs** and **Facilioo heating costs** as independent cumulative external statistics in Home
+Assistant's configured currency. The warm-water cost statistic can be selected as the cost
+statistic for the corresponding water source in the Energy Dashboard. Missing cost fields do not
+erase a previously imported amount; a newer reading explicitly marked as deleted does remove its
+month from both cumulative histories.
+
 ### Why the backfill is an external statistic
 
 Home Assistant 2026 uses two related Recorder paths: native sensors compile five-minute and
@@ -94,7 +102,8 @@ Importing old values under the native entity ID would therefore let the sensor c
 continue from a different zero point. This implementation does not rely on that unstable
 combination. It exposes normal total entities for current Home Assistant state and a separate,
 official external statistic for exact backfill. The total entities include a small
-`historical_statistic_id` attribute to make this relationship inspectable.
+`historical_statistic_id` attribute to make this relationship inspectable. Consumption totals
+also expose `historical_cost_statistic_id`, which points to the matching cost history.
 
 Each historical series contains:
 
@@ -157,4 +166,3 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
 ## License
 
 MIT — see [LICENSE](LICENSE).
-

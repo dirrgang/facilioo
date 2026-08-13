@@ -30,7 +30,12 @@ from .const import (
     STATISTIC_WARM_WATER_COSTS,
     STORE_VERSION,
 )
-from .models import ConsumptionData, MeterKind, MonthlyConsumption, billing_month
+from .models import (
+    ConsumptionData,
+    MeterKind,
+    MonthlyConsumption,
+    latest_readings_by_meter_month,
+)
 
 _LOGGER = logging.getLogger(__name__)
 _INVALID_STATISTIC_KEY = re.compile(r"[^a-z0-9]+")
@@ -40,9 +45,7 @@ def statistic_id(entry_id: str, kind: MeterKind, *, costs: bool = False) -> str:
     """Return an account-specific stable external statistic ID."""
     if costs:
         suffix = (
-            STATISTIC_WARM_WATER_COSTS
-            if kind is MeterKind.WARM_WATER
-            else STATISTIC_HEATING_COSTS
+            STATISTIC_WARM_WATER_COSTS if kind is MeterKind.WARM_WATER else STATISTIC_HEATING_COSTS
         )
     else:
         suffix = STATISTIC_WARM_WATER if kind is MeterKind.WARM_WATER else STATISTIC_HEATING
@@ -84,7 +87,7 @@ def build_statistics(
     }
     if costs and not current_values and not previous:
         return [], {}
-    observed = observed_months or {item.month for item in current}
+    observed = {item.month for item in current} if observed_months is None else observed_months
     values: dict[str, Decimal | str] = dict(previous)
     for month in observed:
         values[month.isoformat()] = current_values.get(month.isoformat(), Decimal(0))
@@ -131,15 +134,14 @@ class FaciliooStatisticsManager:
         meter_kinds = {meter.id: meter.kind for meter in data.meters}
         observed_by_kind: dict[MeterKind, set[date]] = {}
         observed_costs_by_kind: dict[MeterKind, set[date]] = {}
-        for reading in data.readings:
-            if (kind := meter_kinds.get(reading.meter_id)) in (
-                MeterKind.WARM_WATER,
-                MeterKind.HEATING,
-            ):
-                month = billing_month(reading.reading_date, self.hass.config.time_zone)
-                observed_by_kind.setdefault(kind, set()).add(month)
-                if reading.costs is not None or reading.deleted:
-                    observed_costs_by_kind.setdefault(kind, set()).add(month)
+        latest_readings = latest_readings_by_meter_month(
+            data.meters, data.readings, self.hass.config.time_zone
+        )
+        for (meter_id, month), reading in latest_readings.items():
+            kind = meter_kinds[meter_id]
+            observed_by_kind.setdefault(kind, set()).add(month)
+            if reading.costs is not None or reading.deleted:
+                observed_costs_by_kind.setdefault(kind, set()).add(month)
         for kind, unit, unit_class, name, is_costs, store_key in (
             (
                 MeterKind.WARM_WATER,
@@ -196,9 +198,7 @@ class FaciliooStatisticsManager:
                 "has_sum": True,
                 "name": name,
                 "source": DOMAIN,
-                "statistic_id": statistic_id(
-                    self.entry.entry_id, kind, costs=is_costs
-                ),
+                "statistic_id": statistic_id(self.entry.entry_id, kind, costs=is_costs),
                 "unit_class": unit_class,
                 "unit_of_measurement": unit,
             }

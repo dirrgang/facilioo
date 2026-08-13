@@ -182,12 +182,12 @@ def billing_month(reading_date: datetime, time_zone: str) -> date:
     return date(within_period.year, within_period.month, 1)
 
 
-def aggregate_monthly(
+def latest_readings_by_meter_month(
     meters: tuple[ConsumptionMeter, ...],
     readings: tuple[ConsumptionReading, ...],
     time_zone: str,
-) -> dict[MeterKind, tuple[MonthlyConsumption, ...]]:
-    """Select the newest revision per meter/month and aggregate meter kinds."""
+) -> dict[tuple[int, date], ConsumptionReading]:
+    """Select the newest known revision for each supported meter and month."""
     meter_kinds = {meter.id: meter.kind for meter in meters}
     selected: dict[tuple[int, date], ConsumptionReading] = {}
     for reading in readings:
@@ -197,6 +197,17 @@ def aggregate_monthly(
         key = (reading.meter_id, month)
         if key not in selected or reading.revision_key > selected[key].revision_key:
             selected[key] = reading
+    return selected
+
+
+def aggregate_monthly(
+    meters: tuple[ConsumptionMeter, ...],
+    readings: tuple[ConsumptionReading, ...],
+    time_zone: str,
+) -> dict[MeterKind, tuple[MonthlyConsumption, ...]]:
+    """Select the newest revision per meter/month and aggregate meter kinds."""
+    meter_kinds = {meter.id: meter.kind for meter in meters}
+    selected = latest_readings_by_meter_month(meters, readings, time_zone)
 
     aggregated: dict[tuple[MeterKind, date], list[ConsumptionReading]] = {}
     for (meter_id, month), reading in selected.items():

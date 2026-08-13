@@ -12,6 +12,7 @@ from custom_components.facilioo.models import (
     MeterKind,
     aggregate_monthly,
     billing_month,
+    latest_readings_by_meter_month,
 )
 
 
@@ -88,6 +89,38 @@ def test_new_revision_replaces_estimate_and_deleted_removes_month():
     )
     assert MeterKind.WARM_WATER not in aggregate_monthly(
         (meter,), (estimate, actual, deleted), "Europe/Berlin"
+    )
+
+
+def test_latest_revision_without_cost_replaces_stale_cost_revision():
+    meter = ConsumptionMeter.from_api({"id": 1, "typeId": 5, "unitOfMeasure": "M3"})
+    base = {
+        "consumptionMeterId": 1,
+        "readingDate": "2025-11-30T23:00:00Z",
+        "currentValue": 1.5,
+    }
+    old = ConsumptionReading.from_api(
+        base
+        | {
+            "id": 10,
+            "costs": 4.2,
+            "lastModified": "2025-12-01T00:00:00Z",
+        }
+    )
+    latest = ConsumptionReading.from_api(
+        base
+        | {
+            "id": 11,
+            "costs": None,
+            "lastModified": "2025-12-02T00:00:00Z",
+        }
+    )
+
+    selected = latest_readings_by_meter_month((meter,), (old, latest), "Europe/Berlin")
+    assert tuple(selected.values()) == (latest,)
+    assert (
+        aggregate_monthly((meter,), (old, latest), "Europe/Berlin")[MeterKind.WARM_WATER][0].costs
+        is None
     )
 
 

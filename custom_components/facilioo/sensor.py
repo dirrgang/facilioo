@@ -170,7 +170,16 @@ class FaciliooSensor(CoordinatorEntity[FaciliooCoordinator], SensorEntity):
         self._attr_extra_state_attributes = {}
         if description.key in ("warm_water_total", "heating_energy_total"):
             self._attr_extra_state_attributes = {
-                "historical_statistic_id": statistic_id(entry.entry_id, description.kind)
+                "historical_statistic_id": statistic_id(entry.entry_id, description.kind),
+                "historical_cost_statistic_id": statistic_id(
+                    entry.entry_id, description.kind, costs=True
+                ),
+            }
+        elif description.key.endswith("_cost_total"):
+            self._attr_extra_state_attributes = {
+                "historical_statistic_id": statistic_id(
+                    entry.entry_id, description.kind, costs=True
+                )
             }
 
     @property

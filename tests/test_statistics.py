@@ -11,6 +11,15 @@ def month(value: str, when: date, estimated: bool = False) -> MonthlyConsumption
     return MonthlyConsumption(when, Decimal(value), None, estimated)
 
 
+def cost_month(value: str, costs: str | None, when: date) -> MonthlyConsumption:
+    return MonthlyConsumption(
+        when,
+        Decimal(value),
+        Decimal(costs) if costs is not None else None,
+        False,
+    )
+
+
 def test_historical_backfill_has_baseline_and_cumulative_boundaries():
     stats, stored = build_statistics(
         (
@@ -68,6 +77,47 @@ def test_temporarily_omitted_month_retains_last_known_value():
     assert saved["2025-11-01"] == "0.2"
 
 
+def test_monthly_costs_have_independent_cumulative_series():
+    stats, saved = build_statistics(
+        (
+            cost_month("0.172", "3.40", date(2025, 11, 1)),
+            cost_month("0.766", "15.94", date(2025, 12, 1)),
+        ),
+        {},
+        "Europe/Berlin",
+        costs=True,
+    )
+
+    assert [point["sum"] for point in stats] == [0.0, 3.4, 19.34]
+    assert saved == {"2025-11-01": "3.40", "2025-12-01": "15.94"}
+
+
+def test_missing_latest_cost_does_not_erase_stored_month():
+    stats, saved = build_statistics(
+        (cost_month("0.172", None, date(2025, 11, 1)),),
+        {"2025-11-01": "3.40"},
+        "Europe/Berlin",
+        set(),
+        costs=True,
+    )
+
+    assert [point["sum"] for point in stats] == [0.0, 3.4]
+    assert saved == {"2025-11-01": "3.40"}
+
+
+def test_deleted_cost_month_becomes_zero_increment():
+    stats, saved = build_statistics(
+        (),
+        {"2025-11-01": "3.40", "2025-12-01": "15.94"},
+        "Europe/Berlin",
+        {date(2025, 11, 1)},
+        costs=True,
+    )
+
+    assert [point["sum"] for point in stats] == [0.0, 0.0, 15.94]
+    assert saved["2025-11-01"] == "0"
+
+
 def test_statistic_id_is_external_and_account_specific():
     assert statistic_id("abc123", MeterKind.WARM_WATER) == (
         "facilioo:abc123_warm_water_consumption"
@@ -77,4 +127,10 @@ def test_statistic_id_is_external_and_account_specific():
 def test_statistic_id_normalizes_uppercase_config_entry_ulid():
     assert statistic_id("01K2N-ABC__DEF", MeterKind.HEATING) == (
         "facilioo:01k2n_abc_def_heating_energy_consumption"
+    )
+
+
+def test_cost_statistic_id_is_normalized_and_account_specific():
+    assert statistic_id("01K2N-ABC", MeterKind.WARM_WATER, costs=True) == (
+        "facilioo:01k2n_abc_warm_water_costs"
     )

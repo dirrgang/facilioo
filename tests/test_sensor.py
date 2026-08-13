@@ -8,6 +8,7 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 
 from custom_components.facilioo.models import ConsumptionData, MeterKind, MonthlyConsumption
 from custom_components.facilioo.sensor import BASE_DESCRIPTIONS, FaciliooSensor
+from custom_components.facilioo.statistics import statistic_id
 
 
 def _description(key):
@@ -30,6 +31,16 @@ def test_total_sensor_metadata_and_cumulative_value():
         datetime.now(UTC),
     )
     assert water.value_fn(data) == Decimal("0.938")
+
+    entity = FaciliooSensor(
+        SimpleNamespace(data=data, last_update_success=True),
+        SimpleNamespace(entry_id="01K2NABC"),
+        water,
+    )
+    assert entity.extra_state_attributes == {
+        "historical_statistic_id": statistic_id("01K2NABC", MeterKind.WARM_WATER),
+        "historical_cost_statistic_id": statistic_id("01K2NABC", MeterKind.WARM_WATER, costs=True),
+    }
 
 
 def test_last_month_attributes_show_estimate():
