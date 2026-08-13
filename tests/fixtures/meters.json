@@ -1,0 +1,8 @@
+{
+  "items": [
+    {"id": 1001, "typeId": 4, "unitOfMeasure": "KWH", "number": "0013"},
+    {"id": 1002, "typeId": 5, "unitOfMeasure": "M3", "number": "0013"},
+    {"id": 1003, "typeId": 99, "unitOfMeasure": "L", "number": "X"}
+  ],
+  "totalCount": 3
+}

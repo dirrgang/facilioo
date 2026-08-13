@@ -1,0 +1,39 @@
+[project]
+name = "home-assistant-facilioo"
+version = "0.1.0"
+description = "Unofficial Home Assistant integration for Facilioo consumption data"
+readme = "README.md"
+requires-python = ">=3.13"
+license = { text = "MIT" }
+authors = []
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.13",
+]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "SIM", "UP"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[dependency-groups]
+dev = [
+  "homeassistant>=2026.4.0",
+  "pytest>=8.3.0",
+  "pytest-aiohttp>=1.1.0",
+  "pytest-cov>=6.0.0",
+  "pytest-homeassistant-custom-component>=0.13.300",
+  "ruff>=0.12.0",
+]
+

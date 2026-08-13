@@ -1,0 +1,42 @@
+{
+  "title": "Facilioo",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Facilioo verbinden",
+        "description": "Gib die Zugangsdaten deines Facilioo-Bewohnerkontos ein.",
+        "data": {"email": "E-Mail", "password": "Passwort"}
+      },
+      "reauth_confirm": {
+        "title": "Facilioo erneut verbinden",
+        "description": "Aktualisiere die Zugangsdaten für dieses Facilioo-Konto.",
+        "data": {"email": "E-Mail", "password": "Passwort"}
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zu Facilioo fehlgeschlagen",
+      "invalid_auth": "E-Mail-Adresse oder Passwort ist ungültig",
+      "mfa_required": "Dieses Konto erfordert Mehrfaktor-Authentifizierung, die diese Integration derzeit nicht abschließen kann",
+      "no_consumption_data": "Kein unterstützter Warmwasser- oder Heizenergiezähler verfügbar",
+      "rate_limited": "Facilioo begrenzt Anfragen vorübergehend; versuche es später erneut",
+      "unknown_response": "Facilioo hat eine unerwartete Antwort geliefert"
+    },
+    "abort": {
+      "already_configured": "Dieses Facilioo-Konto ist bereits eingerichtet",
+      "reauth_successful": "Facilioo wurde erfolgreich erneut verbunden",
+      "unique_id_mismatch": "Diese Zugangsdaten gehören zu einem anderen Facilioo-Konto"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "warm_water_total": {"name": "Warmwasser Gesamt"},
+      "heating_energy_total": {"name": "Heizenergie Gesamt"},
+      "warm_water_last_month": {"name": "Warmwasser letzter Monat"},
+      "heating_energy_last_month": {"name": "Heizenergie letzter Monat"},
+      "warm_water_cost_last_month": {"name": "Warmwasserkosten letzter Monat"},
+      "heating_cost_last_month": {"name": "Heizkosten letzter Monat"},
+      "warm_water_cost_total": {"name": "Warmwasserkosten Gesamt"},
+      "heating_cost_total": {"name": "Heizkosten Gesamt"}
+    }
+  }
+}

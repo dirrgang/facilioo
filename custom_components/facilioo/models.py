@@ -1,0 +1,220 @@
+"""Typed, defensive models for Facilioo consumption data."""
+
+from __future__ import annotations
+
+from collections.abc import Mapping
+from dataclasses import dataclass
+from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal, InvalidOperation
+from enum import StrEnum
+from typing import Any
+from zoneinfo import ZoneInfo
+
+from .const import TYPE_HEATING, TYPE_WARM_WATER, UNIT_KWH, UNIT_M3
+
+
+class FaciliooDataError(ValueError):
+    """Raised when a required API field is malformed."""
+
+
+class MeterKind(StrEnum):
+    """Consumption categories understood by the integration."""
+
+    WARM_WATER = "warm_water"
+    HEATING = "heating"
+    UNKNOWN = "unknown"
+
+
+def _int(value: Any, field: str) -> int:
+    if isinstance(value, bool):
+        raise FaciliooDataError(f"Invalid {field}")
+    try:
+        return int(value)
+    except (TypeError, ValueError) as err:
+        raise FaciliooDataError(f"Invalid {field}") from err
+
+
+def _decimal(value: Any, field: str, *, required: bool = False) -> Decimal | None:
+    if value is None and not required:
+        return None
+    try:
+        parsed = Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError) as err:
+        raise FaciliooDataError(f"Invalid {field}") from err
+    if not parsed.is_finite():
+        raise FaciliooDataError(f"Invalid {field}")
+    return parsed
+
+
+def _datetime(value: Any, field: str) -> datetime:
+    if not isinstance(value, str) or not value.strip():
+        raise FaciliooDataError(f"Invalid {field}")
+    normalized = value.strip().replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError as err:
+        raise FaciliooDataError(f"Invalid {field}") from err
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise FaciliooDataError(f"Invalid {field}: timezone is required")
+    return parsed.astimezone(UTC)
+
+
+@dataclass(frozen=True, slots=True)
+class ConsumptionMeter:
+    """A Facilioo consumption meter."""
+
+    id: int
+    type_id: int | None
+    unit: str | None
+    number: str | None
+    label: str | None
+    kind: MeterKind
+
+    @classmethod
+    def from_api(cls, raw: Mapping[str, Any]) -> ConsumptionMeter:
+        meter_id = _int(raw.get("id"), "meter id")
+        type_id_raw = raw.get("typeId")
+        type_id = _int(type_id_raw, "meter type") if type_id_raw is not None else None
+        unit_raw = raw.get("unitOfMeasure") or raw.get("unitOfMeasurement")
+        unit = str(unit_raw).strip().upper().replace("³", "3") if unit_raw else None
+        number = str(raw["number"]).strip() if raw.get("number") is not None else None
+        label_parts = (
+            raw.get("meterName"),
+            raw.get("typeName"),
+            raw.get("name"),
+            raw.get("description"),
+        )
+        label = " ".join(str(part) for part in label_parts if part).strip() or None
+        kind = classify_meter(type_id, unit, label)
+        return cls(meter_id, type_id, unit, number, label, kind)
+
+
+def classify_meter(type_id: int | None, unit: str | None, label: str | None) -> MeterKind:
+    """Classify from documented type/unit metadata, with labels as fallback."""
+    normalized = (label or "").casefold()
+    if type_id == TYPE_WARM_WATER and unit == UNIT_M3:
+        return MeterKind.WARM_WATER
+    if type_id == TYPE_HEATING and unit == UNIT_KWH:
+        return MeterKind.HEATING
+    if unit == UNIT_M3 and any(term in normalized for term in ("warmwasser", "warm water")):
+        return MeterKind.WARM_WATER
+    if unit == UNIT_KWH and any(term in normalized for term in ("heiz", "heating", "wärme")):
+        return MeterKind.HEATING
+    return MeterKind.UNKNOWN
+
+
+@dataclass(frozen=True, slots=True)
+class ConsumptionReading:
+    """One monthly Facilioo consumption reading."""
+
+    id: int
+    meter_id: int
+    reading_date: datetime
+    value: Decimal
+    costs: Decimal | None
+    is_estimated: bool
+    deleted: bool
+    last_modified: datetime | None
+
+    @classmethod
+    def from_api(cls, raw: Mapping[str, Any]) -> ConsumptionReading:
+        modified_raw = raw.get("lastModified")
+        deleted_raw = raw.get("deleted")
+        return cls(
+            id=_int(raw.get("id"), "reading id"),
+            meter_id=_int(raw.get("consumptionMeterId"), "consumption meter id"),
+            reading_date=_datetime(raw.get("readingDate"), "reading date"),
+            value=_decimal(raw.get("currentValue"), "current value", required=True),  # type: ignore[arg-type]
+            costs=_decimal(raw.get("costs"), "costs"),
+            is_estimated=bool(raw.get("isEstimated", False)),
+            deleted=deleted_raw is not None and deleted_raw is not False,
+            last_modified=_datetime(modified_raw, "last modified") if modified_raw else None,
+        )
+
+    @property
+    def revision_key(self) -> tuple[datetime, int]:
+        return (self.last_modified or self.reading_date, self.id)
+
+
+@dataclass(frozen=True, slots=True)
+class MonthlyConsumption:
+    """Aggregated readings for a kind and billing month."""
+
+    month: date
+    value: Decimal
+    costs: Decimal | None
+    is_estimated: bool
+
+
+@dataclass(frozen=True, slots=True)
+class ConsumptionData:
+    """Processed coordinator data."""
+
+    meters: tuple[ConsumptionMeter, ...]
+    readings: tuple[ConsumptionReading, ...]
+    monthly: Mapping[MeterKind, tuple[MonthlyConsumption, ...]]
+    updated_at: datetime
+
+    def values(self, kind: MeterKind) -> tuple[MonthlyConsumption, ...]:
+        return self.monthly.get(kind, ())
+
+    def total(self, kind: MeterKind) -> Decimal:
+        return sum((item.value for item in self.values(kind)), Decimal(0))
+
+    def total_costs(self, kind: MeterKind) -> Decimal | None:
+        costs = [item.costs for item in self.values(kind) if item.costs is not None]
+        return sum(costs, Decimal(0)) if costs else None
+
+    def latest(self, kind: MeterKind) -> MonthlyConsumption | None:
+        values = self.values(kind)
+        return values[-1] if values else None
+
+
+def billing_month(reading_date: datetime, time_zone: str) -> date:
+    """Map a period-end timestamp to its local billing month.
+
+    Facilioo period ends can be exactly local midnight of the next month
+    (for example 23:00 UTC in winter). Looking one microsecond back assigns
+    the interval end to the month it closes without guessing a fixed offset.
+    """
+    local_end = reading_date.astimezone(ZoneInfo(time_zone))
+    within_period = local_end - timedelta(microseconds=1)
+    return date(within_period.year, within_period.month, 1)
+
+
+def aggregate_monthly(
+    meters: tuple[ConsumptionMeter, ...],
+    readings: tuple[ConsumptionReading, ...],
+    time_zone: str,
+) -> dict[MeterKind, tuple[MonthlyConsumption, ...]]:
+    """Select the newest revision per meter/month and aggregate meter kinds."""
+    meter_kinds = {meter.id: meter.kind for meter in meters}
+    selected: dict[tuple[int, date], ConsumptionReading] = {}
+    for reading in readings:
+        if meter_kinds.get(reading.meter_id, MeterKind.UNKNOWN) is MeterKind.UNKNOWN:
+            continue
+        month = billing_month(reading.reading_date, time_zone)
+        key = (reading.meter_id, month)
+        if key not in selected or reading.revision_key > selected[key].revision_key:
+            selected[key] = reading
+
+    aggregated: dict[tuple[MeterKind, date], list[ConsumptionReading]] = {}
+    for (meter_id, month), reading in selected.items():
+        if reading.deleted or reading.value < 0:
+            continue
+        aggregated.setdefault((meter_kinds[meter_id], month), []).append(reading)
+
+    result: dict[MeterKind, list[MonthlyConsumption]] = {}
+    for (kind, month), values in aggregated.items():
+        costs = [item.costs for item in values if item.costs is not None]
+        result.setdefault(kind, []).append(
+            MonthlyConsumption(
+                month=month,
+                value=sum((item.value for item in values), Decimal(0)),
+                costs=sum(costs, Decimal(0)) if costs else None,
+                is_estimated=any(item.is_estimated for item in values),
+            )
+        )
+    return {
+        kind: tuple(sorted(items, key=lambda item: item.month)) for kind, items in result.items()
+    }

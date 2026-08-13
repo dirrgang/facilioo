@@ -1,0 +1,42 @@
+{
+  "title": "Facilioo",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect Facilioo",
+        "description": "Enter the credentials of your Facilioo resident account.",
+        "data": {"email": "Email", "password": "Password"}
+      },
+      "reauth_confirm": {
+        "title": "Reconnect Facilioo",
+        "description": "Update the credentials for this Facilioo account.",
+        "data": {"email": "Email", "password": "Password"}
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect to Facilioo",
+      "invalid_auth": "The email address or password is invalid",
+      "mfa_required": "This account requires multi-factor authentication, which this integration cannot complete yet",
+      "no_consumption_data": "No supported warm-water or heating meter is available",
+      "rate_limited": "Facilioo temporarily rate-limited the request; try again later",
+      "unknown_response": "Facilioo returned an unexpected response"
+    },
+    "abort": {
+      "already_configured": "This Facilioo account is already configured",
+      "reauth_successful": "Facilioo was reconnected successfully",
+      "unique_id_mismatch": "These credentials belong to a different Facilioo account"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "warm_water_total": {"name": "Warm water total"},
+      "heating_energy_total": {"name": "Heating energy total"},
+      "warm_water_last_month": {"name": "Warm water last month"},
+      "heating_energy_last_month": {"name": "Heating energy last month"},
+      "warm_water_cost_last_month": {"name": "Warm water cost last month"},
+      "heating_cost_last_month": {"name": "Heating cost last month"},
+      "warm_water_cost_total": {"name": "Warm water cost total"},
+      "heating_cost_total": {"name": "Heating cost total"}
+    }
+  }
+}

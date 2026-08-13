@@ -1,0 +1,35 @@
+{
+  "items": [
+    {
+      "id": 6503300,
+      "consumptionMeterId": 1002,
+      "currentValue": 0.172,
+      "readingDate": "2025-11-30T23:00:00Z",
+      "costs": 9.0948,
+      "isEstimated": false,
+      "deleted": null,
+      "lastModified": "2025-12-02T10:00:00Z"
+    },
+    {
+      "id": 6503301,
+      "consumptionMeterId": 1002,
+      "currentValue": 0.766,
+      "readingDate": "2025-12-31T23:00:00Z",
+      "costs": 15.9429,
+      "isEstimated": true,
+      "deleted": null,
+      "lastModified": "2026-01-02T10:00:00Z"
+    },
+    {
+      "id": 6503302,
+      "consumptionMeterId": 1001,
+      "currentValue": 88.5,
+      "readingDate": "2025-11-30T23:00:00Z",
+      "costs": 21.25,
+      "isEstimated": false,
+      "deleted": null,
+      "lastModified": "2025-12-02T10:00:00Z"
+    }
+  ],
+  "totalCount": 3
+}
