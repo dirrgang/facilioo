@@ -167,6 +167,7 @@ class FaciliooSensor(CoordinatorEntity[FaciliooCoordinator], SensorEntity):
             manufacturer=NAME,
             model="Consumption account",
         )
+        self._attr_extra_state_attributes = {}
         if description.key in ("warm_water_total", "heating_energy_total"):
             self._attr_extra_state_attributes = {
                 "historical_statistic_id": statistic_id(entry.entry_id, description.kind)

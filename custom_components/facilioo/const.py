@@ -4,7 +4,7 @@ from datetime import timedelta
 
 DOMAIN = "facilioo"
 NAME = "Facilioo"
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 
 BASE_URL = "https://api.facilioo.de"
 API_VERSION = "2.0"
