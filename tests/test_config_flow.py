@@ -9,7 +9,7 @@ from custom_components.facilioo.config_flow import account_unique_id
 from custom_components.facilioo.const import CONF_EMAIL, CONF_PASSWORD, DOMAIN
 
 
-async def test_successful_setup(hass, recorder_mock):
+async def test_successful_setup(recorder_mock, hass):
     with patch("custom_components.facilioo.config_flow._validate", new=AsyncMock()):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -20,7 +20,7 @@ async def test_successful_setup(hass, recorder_mock):
     assert result["data"][CONF_EMAIL] == "resident@example.test"
 
 
-async def test_duplicate_account(hass, recorder_mock):
+async def test_duplicate_account(recorder_mock, hass):
     entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id=account_unique_id("resident@example.test"),
@@ -37,7 +37,7 @@ async def test_duplicate_account(hass, recorder_mock):
     assert result["reason"] == "already_configured"
 
 
-async def test_errors_are_presented(hass, recorder_mock):
+async def test_errors_are_presented(recorder_mock, hass):
     from custom_components.facilioo.api import FaciliooConnectionError
 
     with patch(
@@ -53,7 +53,7 @@ async def test_errors_are_presented(hass, recorder_mock):
     assert result["errors"] == {"base": "cannot_connect"}
 
 
-async def test_reauthentication_updates_password(hass, recorder_mock):
+async def test_reauthentication_updates_password(recorder_mock, hass):
     entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id=account_unique_id("resident@example.test"),
