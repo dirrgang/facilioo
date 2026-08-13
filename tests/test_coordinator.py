@@ -17,7 +17,7 @@ from custom_components.facilioo.models import ConsumptionMeter, ConsumptionReadi
 
 
 async def test_coordinator_aggregates(hass):
-    hass.config.set_time_zone("Europe/Berlin")
+    await hass.config.async_set_time_zone("Europe/Berlin")
     meter = ConsumptionMeter.from_api({"id": 1, "typeId": 5, "unitOfMeasure": "M3"})
     reading = ConsumptionReading.from_api(
         {
