@@ -111,6 +111,7 @@ class ConsumptionReading:
     meter_id: int
     reading_date: datetime
     value: Decimal
+    value_in_different_unit: Decimal | None
     costs: Decimal | None
     is_estimated: bool
     deleted: bool
@@ -125,6 +126,10 @@ class ConsumptionReading:
             meter_id=_int(raw.get("consumptionMeterId"), "consumption meter id"),
             reading_date=_datetime(raw.get("readingDate"), "reading date"),
             value=_decimal(raw.get("currentValue"), "current value", required=True),  # type: ignore[arg-type]
+            value_in_different_unit=_decimal(
+                raw.get("currentValueInDifferentUnitOfMeasure"),
+                "current value in different unit of measure",
+            ),
             costs=_decimal(raw.get("costs"), "costs"),
             is_estimated=bool(raw.get("isEstimated", False)),
             deleted=deleted_raw is not None and deleted_raw is not False,
@@ -144,6 +149,7 @@ class MonthlyConsumption:
     value: Decimal
     costs: Decimal | None
     is_estimated: bool
+    value_in_different_unit: Decimal | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -164,6 +170,18 @@ class ConsumptionData:
     def total_costs(self, kind: MeterKind) -> Decimal | None:
         costs = [item.costs for item in self.values(kind) if item.costs is not None]
         return sum(costs, Decimal(0)) if costs else None
+
+    def total_in_different_unit(self, kind: MeterKind) -> Decimal | None:
+        """Return a complete alternative-unit total, never a partial total."""
+        values = self.values(kind)
+        different_values = [
+            item.value_in_different_unit
+            for item in values
+            if item.value_in_different_unit is not None
+        ]
+        if not values or len(different_values) != len(values):
+            return None
+        return sum(different_values, Decimal(0))
 
     def latest(self, kind: MeterKind) -> MonthlyConsumption | None:
         values = self.values(kind)
@@ -218,12 +236,22 @@ def aggregate_monthly(
     result: dict[MeterKind, list[MonthlyConsumption]] = {}
     for (kind, month), values in aggregated.items():
         costs = [item.costs for item in values if item.costs is not None]
+        different_values = [
+            item.value_in_different_unit
+            for item in values
+            if item.value_in_different_unit is not None
+        ]
         result.setdefault(kind, []).append(
             MonthlyConsumption(
                 month=month,
                 value=sum((item.value for item in values), Decimal(0)),
                 costs=sum(costs, Decimal(0)) if costs else None,
                 is_estimated=any(item.is_estimated for item in values),
+                value_in_different_unit=(
+                    sum(different_values, Decimal(0))
+                    if len(different_values) == len(values)
+                    else None
+                ),
             )
         )
     return {

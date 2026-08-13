@@ -160,17 +160,47 @@ def test_external_statistic_names_are_unambiguous_energy_history():
     assert statistic_name(MeterKind.WARM_WATER) == (
         "Facilioo warm water consumption history (Energy Dashboard water source)"
     )
+    assert statistic_name(MeterKind.WARM_WATER, costs=True) == (
+        "Facilioo warm water cost history (Energy Dashboard source cost)"
+    )
     assert statistic_name(MeterKind.HEATING, costs=True) == (
         "Facilioo heating cost history (Energy Dashboard gas cost)"
     )
     assert statistic_name(MeterKind.HEATING) == (
         "Facilioo heating consumption history (Energy Dashboard gas source)"
     )
+    assert statistic_name(MeterKind.WARM_WATER, different_unit=True) == (
+        "Facilioo warm water energy history (Energy Dashboard gas source)"
+    )
 
 
 def test_heating_energy_is_valid_for_home_assistant_gas_source():
     assert SensorDeviceClass.ENERGY in GAS_USAGE_DEVICE_CLASSES
     assert UnitOfEnergy.KILO_WATT_HOUR in GAS_USAGE_UNITS[SensorDeviceClass.ENERGY]
+
+
+def test_warm_water_energy_has_independent_cumulative_series():
+    current = (
+        MonthlyConsumption(date(2025, 11, 1), Decimal("0.172"), None, False, Decimal("10.0018")),
+        MonthlyConsumption(date(2025, 12, 1), Decimal("0.766"), None, False, Decimal("44.5529")),
+    )
+
+    stats, saved = build_statistics(current, {}, "Europe/Berlin", different_unit=True)
+
+    assert [point["sum"] for point in stats] == [0.0, 10.0018, 54.5547]
+    assert saved == {"2025-11-01": "10.0018", "2025-12-01": "44.5529"}
+    assert statistic_id("01K2NABC", MeterKind.WARM_WATER, different_unit=True) == (
+        "facilioo:01k2nabc_warm_water_energy_consumption"
+    )
+
+
+def test_incomplete_initial_warm_water_energy_series_is_not_published():
+    current = (
+        MonthlyConsumption(date(2025, 11, 1), Decimal("0.172"), None, False, Decimal("10.0018")),
+        MonthlyConsumption(date(2025, 12, 1), Decimal("0.766"), None, False),
+    )
+
+    assert build_statistics(current, {}, "Europe/Berlin", different_unit=True) == ([], {})
 
 
 @pytest.mark.asyncio
@@ -213,6 +243,7 @@ async def test_layout_migration_clears_only_owned_series_once(monkeypatch):
             statistic_id("01K2NABC", MeterKind.WARM_WATER, costs=True),
             statistic_id("01K2NABC", MeterKind.HEATING),
             statistic_id("01K2NABC", MeterKind.HEATING, costs=True),
+            statistic_id("01K2NABC", MeterKind.WARM_WATER, different_unit=True),
         ]
     ]
     assert manager.store.saved["layout_version"] == 2

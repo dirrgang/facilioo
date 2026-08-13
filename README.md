@@ -12,6 +12,7 @@ facilioo or MÜNCH.
 ## Features
 
 - Warm-water consumption in m³
+- Warm-water energy equivalent in kWh when supplied by Facilioo extended readings
 - Heating energy in kWh
 - Latest monthly costs in Home Assistant's configured currency
 - Cumulative total sensors with `state_class: total`
@@ -34,6 +35,7 @@ Entities are created only when the corresponding source meter exists:
 | Entity name | Meaning | Default |
 | --- | --- | --- |
 | Warm water — cumulative total | Sum of all valid monthly warm-water readings | Enabled |
+| Warm water energy — cumulative total | Sum of Facilioo's monthly warm-water energy values | Enabled when complete |
 | Heating energy — cumulative total | Sum of all valid monthly heating readings | Enabled |
 | Warm water — latest billing month | Newest monthly value | Enabled |
 | Heating energy — latest billing month | Newest monthly value | Enabled |
@@ -89,6 +91,14 @@ as its cost statistic. Home Assistant explicitly accepts energy-class statistics
 source, so the integration keeps the technically correct `energy` device class and does not pretend
 that the Facilioo value is a physical gas-volume reading.
 
+If Facilioo's extended readings provide `currentValueInDifferentUnitOfMeasure` for every imported
+warm-water month, the integration also publishes **Facilioo warm water energy history (Energy
+Dashboard gas source)** in kWh. It can be added as a second gas source for domestic hot-water energy,
+with the warm-water cost history selected as its cost statistic. This value comes directly from
+Facilioo; the integration does not invent a fixed m³-to-kWh conversion. The original m³ water source
+remains available but should not also be added if the kWh gas-source representation is the desired
+dashboard model.
+
 The external history is a Recorder statistic, not a second Home Assistant entity. Home Assistant
 shows entity statistics and external statistics in the same picker even though they have different
 technical origins. The normal total entity provides a current state for automations and cards; the
@@ -98,9 +108,10 @@ without letting the sensor compiler continue it from a conflicting baseline.
 
 When Facilioo supplies monthly costs, the integration also publishes separate cumulative cost
 statistics in Home Assistant's configured currency. Warm-water costs are labelled **Energy
-Dashboard water cost** and heating costs **Energy Dashboard gas cost**; each can be assigned to its
-corresponding source. Missing cost fields do not erase a previously imported amount; a newer reading
-explicitly marked as deleted removes its month from both cumulative histories.
+Dashboard source cost** so they can accompany either the m³ water source or the kWh gas-source
+representation. Heating costs are labelled **Energy Dashboard gas cost**. Missing cost fields do not
+erase a previously imported amount; a newer reading explicitly marked as deleted removes its month
+from both cumulative histories.
 
 ### Why the backfill is an external statistic
 
@@ -154,6 +165,8 @@ that ended. This also handles daylight-saving boundaries without fixed UTC-offse
   the coordinator retains the last successful values when a refresh fails.
 - The currency is taken from Home Assistant because the observed reading response provides costs
   but no reliable per-reading currency field.
+- The warm-water kWh entity/statistic is available only when every imported warm-water month has
+  Facilioo's alternative-unit value. A partial energy history is intentionally not published.
 
 ## Privacy and security
 

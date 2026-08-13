@@ -43,6 +43,41 @@ def test_total_sensor_metadata_and_cumulative_value():
     }
 
 
+def test_warm_water_energy_sensor_uses_api_alternative_value():
+    energy = _description("warm_water_energy_total")
+    data = ConsumptionData(
+        (),
+        (),
+        {
+            MeterKind.WARM_WATER: (
+                MonthlyConsumption(
+                    date(2025, 12, 1),
+                    Decimal("0.766"),
+                    Decimal("15.94"),
+                    False,
+                    Decimal("44.5529"),
+                ),
+            )
+        },
+        datetime.now(UTC),
+    )
+
+    assert energy.device_class is SensorDeviceClass.ENERGY
+    assert energy.state_class is SensorStateClass.TOTAL
+    assert energy.value_fn(data) == Decimal("44.5529")
+    entity = FaciliooSensor(
+        SimpleNamespace(data=data, last_update_success=True),
+        SimpleNamespace(entry_id="01K2NABC"),
+        energy,
+    )
+    assert entity.extra_state_attributes == {
+        "historical_statistic_id": statistic_id(
+            "01K2NABC", MeterKind.WARM_WATER, different_unit=True
+        ),
+        "historical_cost_statistic_id": statistic_id("01K2NABC", MeterKind.WARM_WATER, costs=True),
+    }
+
+
 def test_last_month_attributes_show_estimate():
     latest = _description("warm_water_last_month")
     data = ConsumptionData(

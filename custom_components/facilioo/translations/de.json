@@ -31,6 +31,7 @@
     "sensor": {
       "warm_water_total": {"name": "Warmwasser — kumulierter Gesamtstand"},
       "heating_energy_total": {"name": "Heizenergie — kumulierter Gesamtstand"},
+      "warm_water_energy_total": {"name": "Warmwasserenergie — kumulierter Gesamtstand"},
       "warm_water_last_month": {"name": "Warmwasser — letzter Abrechnungsmonat"},
       "heating_energy_last_month": {"name": "Heizenergie — letzter Abrechnungsmonat"},
       "warm_water_cost_last_month": {"name": "Warmwasserkosten — letzter Abrechnungsmonat"},

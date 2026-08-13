@@ -6,10 +6,12 @@ from decimal import Decimal
 import pytest
 
 from custom_components.facilioo.models import (
+    ConsumptionData,
     ConsumptionMeter,
     ConsumptionReading,
     FaciliooDataError,
     MeterKind,
+    MonthlyConsumption,
     aggregate_monthly,
     billing_month,
     latest_readings_by_meter_month,
@@ -49,6 +51,7 @@ def test_aggregate_values_estimates_and_costs(meter_payload, reading_payload):
     assert [item.value for item in water] == [Decimal("0.172"), Decimal("0.766")]
     assert water[-1].is_estimated is True
     assert water[-1].costs == Decimal("15.9429")
+    assert water[-1].value_in_different_unit == Decimal("44.5529")
 
 
 def test_new_revision_replaces_estimate_and_deleted_removes_month():
@@ -122,6 +125,44 @@ def test_latest_revision_without_cost_replaces_stale_cost_revision():
         aggregate_monthly((meter,), (old, latest), "Europe/Berlin")[MeterKind.WARM_WATER][0].costs
         is None
     )
+
+
+def test_alternative_unit_total_requires_every_month():
+    complete = ConsumptionData(
+        (),
+        (),
+        {
+            MeterKind.WARM_WATER: (
+                MonthlyConsumption(
+                    date(2025, 11, 1),
+                    Decimal("0.172"),
+                    None,
+                    False,
+                    Decimal("10.0018"),
+                ),
+                MonthlyConsumption(
+                    date(2025, 12, 1),
+                    Decimal("0.766"),
+                    None,
+                    False,
+                    Decimal("44.5529"),
+                ),
+            )
+        },
+        datetime.now(UTC),
+    )
+    incomplete = ConsumptionData(
+        (),
+        (),
+        {
+            MeterKind.WARM_WATER: complete.values(MeterKind.WARM_WATER)
+            + (MonthlyConsumption(date(2026, 1, 1), Decimal("0.5"), None, False),)
+        },
+        datetime.now(UTC),
+    )
+
+    assert complete.total_in_different_unit(MeterKind.WARM_WATER) == Decimal("54.5547")
+    assert incomplete.total_in_different_unit(MeterKind.WARM_WATER) is None
 
 
 @pytest.mark.parametrize("value", [None, "nan", "inf", "not-a-number"])

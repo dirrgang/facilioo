@@ -30,6 +30,7 @@ from .const import (
     STATISTIC_HEATING_COSTS,
     STATISTIC_WARM_WATER,
     STATISTIC_WARM_WATER_COSTS,
+    STATISTIC_WARM_WATER_ENERGY,
     STORE_VERSION,
 )
 from .models import (
@@ -45,9 +46,21 @@ _STATISTICS_LAYOUT_VERSION = 2
 _CLEAR_STATISTICS_TIMEOUT = 30
 
 
-def statistic_id(entry_id: str, kind: MeterKind, *, costs: bool = False) -> str:
+def statistic_id(
+    entry_id: str,
+    kind: MeterKind,
+    *,
+    costs: bool = False,
+    different_unit: bool = False,
+) -> str:
     """Return an account-specific stable external statistic ID."""
-    if costs:
+    if costs and different_unit:
+        raise ValueError("A statistic cannot represent costs and consumption together")
+    if different_unit:
+        if kind is not MeterKind.WARM_WATER:
+            raise ValueError("Alternative-unit history is only defined for warm water")
+        suffix = STATISTIC_WARM_WATER_ENERGY
+    elif costs:
         suffix = (
             STATISTIC_WARM_WATER_COSTS if kind is MeterKind.WARM_WATER else STATISTIC_HEATING_COSTS
         )
@@ -59,11 +72,15 @@ def statistic_id(entry_id: str, kind: MeterKind, *, costs: bool = False) -> str:
     return f"{DOMAIN}:{entry_key}_{suffix}"
 
 
-def statistic_name(kind: MeterKind, *, costs: bool = False) -> str:
+def statistic_name(kind: MeterKind, *, costs: bool = False, different_unit: bool = False) -> str:
     """Return a name describing the external series' actual UI role."""
+    if different_unit:
+        if kind is not MeterKind.WARM_WATER or costs:
+            raise ValueError("Invalid alternative-unit statistic")
+        return "Facilioo warm water energy history (Energy Dashboard gas source)"
     if kind is MeterKind.WARM_WATER:
         value = "cost history" if costs else "consumption history"
-        role = "water cost" if costs else "water source"
+        role = "source cost" if costs else "water source"
         return f"Facilioo warm water {value} (Energy Dashboard {role})"
     value = "cost history" if costs else "consumption history"
     role = "gas cost" if costs else "gas source"
@@ -93,14 +110,26 @@ def build_statistics(
     observed_months: set[date] | None = None,
     *,
     costs: bool = False,
+    different_unit: bool = False,
 ) -> tuple[list[StatisticData], dict[str, str]]:
     """Build an exact cumulative series without erasing transiently omitted data."""
+    if costs and different_unit:
+        raise ValueError("A series cannot contain costs and consumption together")
     current_values = {
-        item.month.isoformat(): item.costs if costs else item.value
+        item.month.isoformat(): (
+            item.costs if costs else item.value_in_different_unit if different_unit else item.value
+        )
         for item in current
-        if not costs or item.costs is not None
+        if (not costs or item.costs is not None)
+        and (not different_unit or item.value_in_different_unit is not None)
     }
-    if costs and not current_values and not previous:
+    if (
+        different_unit
+        and not previous
+        and any(item.value_in_different_unit is None for item in current)
+    ):
+        return [], {}
+    if (costs or different_unit) and not current_values and not previous:
         return [], {}
     observed = {item.month for item in current} if observed_months is None else observed_months
     values: dict[str, Decimal | str] = dict(previous)
@@ -154,6 +183,9 @@ class FaciliooStatisticsManager:
             for kind in (MeterKind.WARM_WATER, MeterKind.HEATING)
             for costs in (False, True)
         ]
+        statistic_ids.append(
+            statistic_id(self.entry.entry_id, MeterKind.WARM_WATER, different_unit=True)
+        )
         get_instance(self.hass).async_clear_statistics(statistic_ids, on_done=on_done)
         try:
             async with asyncio.timeout(_CLEAR_STATISTICS_TIMEOUT):
@@ -175,6 +207,7 @@ class FaciliooStatisticsManager:
         meter_kinds = {meter.id: meter.kind for meter in data.meters}
         observed_by_kind: dict[MeterKind, set[date]] = {}
         observed_costs_by_kind: dict[MeterKind, set[date]] = {}
+        observed_different_unit_by_kind: dict[MeterKind, set[date]] = {}
         latest_readings = latest_readings_by_meter_month(
             data.meters, data.readings, self.hass.config.time_zone
         )
@@ -183,12 +216,15 @@ class FaciliooStatisticsManager:
             observed_by_kind.setdefault(kind, set()).add(month)
             if reading.costs is not None or reading.deleted:
                 observed_costs_by_kind.setdefault(kind, set()).add(month)
-        for kind, unit, unit_class, name, is_costs, store_key in (
+            if reading.value_in_different_unit is not None or reading.deleted:
+                observed_different_unit_by_kind.setdefault(kind, set()).add(month)
+        for kind, unit, unit_class, name, is_costs, is_different_unit, store_key in (
             (
                 MeterKind.WARM_WATER,
                 UnitOfVolume.CUBIC_METERS,
                 VolumeConverter.UNIT_CLASS,
                 statistic_name(MeterKind.WARM_WATER),
+                False,
                 False,
                 MeterKind.WARM_WATER.value,
             ),
@@ -198,7 +234,17 @@ class FaciliooStatisticsManager:
                 EnergyConverter.UNIT_CLASS,
                 statistic_name(MeterKind.HEATING),
                 False,
+                False,
                 MeterKind.HEATING.value,
+            ),
+            (
+                MeterKind.WARM_WATER,
+                UnitOfEnergy.KILO_WATT_HOUR,
+                EnergyConverter.UNIT_CLASS,
+                statistic_name(MeterKind.WARM_WATER, different_unit=True),
+                False,
+                True,
+                "warm_water_energy",
             ),
             (
                 MeterKind.WARM_WATER,
@@ -206,6 +252,7 @@ class FaciliooStatisticsManager:
                 None,
                 statistic_name(MeterKind.WARM_WATER, costs=True),
                 True,
+                False,
                 f"{MeterKind.WARM_WATER.value}_costs",
             ),
             (
@@ -214,6 +261,7 @@ class FaciliooStatisticsManager:
                 None,
                 statistic_name(MeterKind.HEATING, costs=True),
                 True,
+                False,
                 f"{MeterKind.HEATING.value}_costs",
             ),
         ):
@@ -227,9 +275,12 @@ class FaciliooStatisticsManager:
                 (
                     observed_costs_by_kind.get(kind, set())
                     if is_costs
+                    else observed_different_unit_by_kind.get(kind, set())
+                    if is_different_unit
                     else observed_by_kind.get(kind, set())
                 ),
                 costs=is_costs,
+                different_unit=is_different_unit,
             )
             if not stats:
                 next_months[store_key] = stored
@@ -239,7 +290,12 @@ class FaciliooStatisticsManager:
                 "has_sum": True,
                 "name": name,
                 "source": DOMAIN,
-                "statistic_id": statistic_id(self.entry.entry_id, kind, costs=is_costs),
+                "statistic_id": statistic_id(
+                    self.entry.entry_id,
+                    kind,
+                    costs=is_costs,
+                    different_unit=is_different_unit,
+                ),
                 "unit_class": unit_class,
                 "unit_of_measurement": unit,
             }

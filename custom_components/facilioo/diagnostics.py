@@ -9,6 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from . import FaciliooRuntimeData
+from .models import MeterKind
 
 
 async def async_get_config_entry_diagnostics(
@@ -29,4 +30,9 @@ async def async_get_config_entry_diagnostics(
             kind.value: [value.month.isoformat()[:7] for value in values]
             for kind, values in data.monthly.items()
         },
+        "warm_water_energy_billing_months": [
+            value.month.isoformat()[:7]
+            for value in data.values(MeterKind.WARM_WATER)
+            if value.value_in_different_unit is not None
+        ],
     }

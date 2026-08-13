@@ -37,6 +37,7 @@
     "sensor": {
       "warm_water_total": {"name": "Warm water — cumulative total"},
       "heating_energy_total": {"name": "Heating energy — cumulative total"},
+      "warm_water_energy_total": {"name": "Warm water energy — cumulative total"},
       "warm_water_last_month": {"name": "Warm water — latest billing month"},
       "heating_energy_last_month": {"name": "Heating energy — latest billing month"},
       "warm_water_cost_last_month": {"name": "Warm water cost — latest billing month"},

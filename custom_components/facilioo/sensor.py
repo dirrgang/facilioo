@@ -78,6 +78,16 @@ BASE_DESCRIPTIONS = (
         value_fn=lambda data: data.total(MeterKind.HEATING),
     ),
     FaciliooSensorDescription(
+        key="warm_water_energy_total",
+        translation_key="warm_water_energy_total",
+        kind=MeterKind.WARM_WATER,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL,
+        suggested_display_precision=3,
+        value_fn=lambda data: data.total_in_different_unit(MeterKind.WARM_WATER),
+    ),
+    FaciliooSensorDescription(
         key="warm_water_last_month",
         translation_key="warm_water_last_month",
         kind=MeterKind.WARM_WATER,
@@ -143,6 +153,10 @@ async def async_setup_entry(
         FaciliooSensor(runtime.coordinator, entry, description)
         for description in descriptions
         if description.kind in kinds
+        and (
+            description.key != "warm_water_energy_total"
+            or description.value_fn(runtime.coordinator.data) is not None
+        )
     )
 
 
@@ -171,6 +185,15 @@ class FaciliooSensor(CoordinatorEntity[FaciliooCoordinator], SensorEntity):
         if description.key in ("warm_water_total", "heating_energy_total"):
             self._attr_extra_state_attributes = {
                 "historical_statistic_id": statistic_id(entry.entry_id, description.kind),
+                "historical_cost_statistic_id": statistic_id(
+                    entry.entry_id, description.kind, costs=True
+                ),
+            }
+        elif description.key == "warm_water_energy_total":
+            self._attr_extra_state_attributes = {
+                "historical_statistic_id": statistic_id(
+                    entry.entry_id, description.kind, different_unit=True
+                ),
                 "historical_cost_statistic_id": statistic_id(
                     entry.entry_id, description.kind, costs=True
                 ),
