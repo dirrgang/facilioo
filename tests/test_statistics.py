@@ -72,3 +72,9 @@ def test_statistic_id_is_external_and_account_specific():
     assert statistic_id("abc123", MeterKind.WARM_WATER) == (
         "facilioo:abc123_warm_water_consumption"
     )
+
+
+def test_statistic_id_normalizes_uppercase_config_entry_ulid():
+    assert statistic_id("01K2N-ABC__DEF", MeterKind.HEATING) == (
+        "facilioo:01k2n_abc_def_heating_energy_consumption"
+    )

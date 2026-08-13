@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
@@ -17,6 +18,7 @@ from homeassistant.components.recorder.statistics import async_add_external_stat
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfEnergy, UnitOfVolume
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.storage import Store
 from homeassistant.util.unit_conversion import EnergyConverter, VolumeConverter
 
@@ -29,12 +31,16 @@ from .const import (
 from .models import ConsumptionData, MeterKind, MonthlyConsumption, billing_month
 
 _LOGGER = logging.getLogger(__name__)
+_INVALID_STATISTIC_KEY = re.compile(r"[^a-z0-9]+")
 
 
 def statistic_id(entry_id: str, kind: MeterKind) -> str:
     """Return an account-specific stable external statistic ID."""
     suffix = STATISTIC_WARM_WATER if kind is MeterKind.WARM_WATER else STATISTIC_HEATING
-    return f"{DOMAIN}:{entry_id}_{suffix}"
+    # Config entry IDs are opaque. Newer Home Assistant versions may use uppercase
+    # ULIDs, while Recorder only accepts lowercase statistic ID slugs.
+    entry_key = _INVALID_STATISTIC_KEY.sub("_", entry_id.casefold()).strip("_") or "entry"
+    return f"{DOMAIN}:{entry_key}_{suffix}"
 
 
 def _next_month(month: date) -> date:
@@ -138,8 +144,8 @@ class FaciliooStatisticsManager:
                 self.hass.config.time_zone,
                 observed_by_kind.get(kind, set()),
             )
-            next_months[kind.value] = stored
             if not stats:
+                next_months[kind.value] = stored
                 continue
             metadata: StatisticMetaData = {
                 "mean_type": StatisticMeanType.NONE,
@@ -150,6 +156,14 @@ class FaciliooStatisticsManager:
                 "unit_class": unit_class,
                 "unit_of_measurement": unit,
             }
-            async_add_external_statistics(self.hass, metadata, stats)
+            try:
+                async_add_external_statistics(self.hass, metadata, stats)
+            except HomeAssistantError as err:
+                # Historical import is additive functionality. Recorder rejecting a
+                # batch must not prevent the regular Facilioo entities from loading.
+                _LOGGER.error("Unable to import Facilioo %s history: %s", kind.value, err)
+                next_months[kind.value] = previous
+            else:
+                next_months[kind.value] = stored
         await self.store.async_save({"months": next_months})
         _LOGGER.debug("Facilioo historical statistics synchronized")
