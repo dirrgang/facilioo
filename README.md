@@ -21,8 +21,10 @@ The energy dashboard can then look like this:
 - Cumulative total sensors with `state_class: total`
 - Historical consumption and cost backfill through Home Assistant's supported Recorder
   statistics API
-- Idempotent daily synchronization (one poll per day)
-- Rewrites historical points when Facilioo corrects or deletes a reading
+- Incremental daily synchronization using Facilioo's `changedSince` filter
+- Periodic full reconciliation to detect records that were removed from the API without a deletion
+  tombstone
+- Rewrites historical points when Facilioo corrects, clears, or deletes a reading
 - Estimated-reading status on latest-month sensors
 - German and English UI translations
 - Config flow, reauthentication, diagnostics, and HACS-compatible layout
@@ -149,6 +151,23 @@ Version 0.1.5 performs a one-time rebuild of only this config entry's external F
 This removes incorrectly placed experimental month-end points written by version 0.1.3 and then
 immediately imports the authoritative monthly sequence again. Other Recorder statistics and the
 native sensor history are not modified.
+
+## Synchronization behavior
+
+The first refresh imports the complete reading history. Subsequent daily refreshes use
+`changedSince` with a short overlap and merge returned revisions by stable reading ID, so repeated
+results are idempotent. The synchronization watermark advances only after the response has been
+parsed, aggregated, and persisted successfully.
+
+Facilioo's API may omit hard-deleted entities instead of returning a deletion marker. To avoid
+keeping such records indefinitely, the integration performs a full reconciliation every seven days.
+Missing records are removed from the persisted cache, and an in-memory deletion marker is emitted
+for the affected billing month during that refresh so historical Recorder statistics are corrected
+without persisting a fabricated API record.
+
+`currentValue` is nullable in the Facilioo API. A newer revision with a null value is retained as
+the authoritative revision and clears the previous consumption for that meter/month instead of
+leaving a stale cached value behind.
 
 ## Time zones
 

@@ -110,7 +110,7 @@ class ConsumptionReading:
     id: int
     meter_id: int
     reading_date: datetime
-    value: Decimal
+    value: Decimal | None
     value_in_different_unit: Decimal | None
     costs: Decimal | None
     is_estimated: bool
@@ -125,7 +125,7 @@ class ConsumptionReading:
             id=_int(raw.get("id"), "reading id"),
             meter_id=_int(raw.get("consumptionMeterId"), "consumption meter id"),
             reading_date=_datetime(raw.get("readingDate"), "reading date"),
-            value=_decimal(raw.get("currentValue"), "current value", required=True),  # type: ignore[arg-type]
+            value=_decimal(raw.get("currentValue"), "current value"),
             value_in_different_unit=_decimal(
                 raw.get("currentValueInDifferentUnitOfMeasure"),
                 "current value in different unit of measure",
@@ -229,7 +229,7 @@ def aggregate_monthly(
 
     aggregated: dict[tuple[MeterKind, date], list[ConsumptionReading]] = {}
     for (meter_id, month), reading in selected.items():
-        if reading.deleted or reading.value < 0:
+        if reading.deleted or reading.value is None or reading.value < 0:
             continue
         aggregated.setdefault((meter_kinds[meter_id], month), []).append(reading)
 
@@ -244,7 +244,10 @@ def aggregate_monthly(
         result.setdefault(kind, []).append(
             MonthlyConsumption(
                 month=month,
-                value=sum((item.value for item in values), Decimal(0)),
+                value=sum(
+                    (item.value for item in values if item.value is not None),
+                    Decimal(0),
+                ),
                 costs=sum(costs, Decimal(0)) if costs else None,
                 is_estimated=any(item.is_estimated for item in values),
                 value_in_different_unit=(
