@@ -9,6 +9,9 @@ with every Facilioo tenant or white-label app is not guaranteed.
 This project is independent, community-maintained, and is not affiliated with or endorsed by
 facilioo or MÜNCH.
 
+The energy dashboard can then look like this:
+<img width="1706" height="535" alt="grafik" src="https://github.com/user-attachments/assets/7b8a05e1-ea2c-48ed-adfe-54795e8bbeeb" />
+
 ## Features
 
 - Warm-water consumption in m³
