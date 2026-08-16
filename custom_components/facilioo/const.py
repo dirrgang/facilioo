@@ -11,12 +11,14 @@ API_VERSION = "2.0"
 LOGIN_ENDPOINT = "/api/auth/login"
 METERS_ENDPOINT = "/api/consumption-meters"
 READINGS_ENDPOINT = "/api/consumption-readings"
+READINGS_SEARCH_ENDPOINT = "/api/consumption-readings/search"
 EXTENDED_READINGS_ENDPOINT = "/api/consumption-readings-extended"
 
 CONF_EMAIL = "email"
 CONF_PASSWORD = "password"
 PLATFORMS = ["sensor"]
 UPDATE_INTERVAL = timedelta(days=1)
+SYNC_OVERLAP = timedelta(minutes=5)
 REQUEST_TIMEOUT = 30
 PAGE_SIZE = 100
 
@@ -31,3 +33,4 @@ STATISTIC_HEATING = "heating_energy_consumption"
 STATISTIC_WARM_WATER_COSTS = "warm_water_costs"
 STATISTIC_HEATING_COSTS = "heating_costs"
 STORE_VERSION = 1
+SYNC_STORE_VERSION = 1
