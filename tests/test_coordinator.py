@@ -1,6 +1,6 @@
 """Coordinator error mapping and data processing tests."""
 
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock
 
 import pytest
@@ -12,7 +12,7 @@ from custom_components.facilioo.api import (
     FaciliooAuthenticationError,
     FaciliooConnectionError,
 )
-from custom_components.facilioo.const import DOMAIN, SYNC_OVERLAP
+from custom_components.facilioo.const import DOMAIN, RECONCILIATION_INTERVAL, SYNC_OVERLAP
 from custom_components.facilioo.coordinator import FaciliooCoordinator
 from custom_components.facilioo.models import ConsumptionMeter, ConsumptionReading, MeterKind
 
@@ -117,6 +117,82 @@ async def test_coordinator_delta_keeps_deletion_tombstone(hass):
 
     assert updated.total(MeterKind.WARM_WATER) == 0
     assert updated.readings == (deleted,)
+
+
+async def test_coordinator_delta_nullable_value_clears_cached_consumption(hass):
+    await hass.config.async_set_time_zone("Europe/Berlin")
+    meter = ConsumptionMeter.from_api({"id": 1, "typeId": 5, "unitOfMeasure": "M3"})
+    reading = ConsumptionReading.from_api(
+        {
+            "id": 10,
+            "consumptionMeterId": 1,
+            "currentValue": 0.5,
+            "readingDate": "2026-01-31T23:00:00Z",
+            "lastModified": "2026-02-10T10:00:00Z",
+        }
+    )
+    cleared = ConsumptionReading.from_api(
+        {
+            "id": 10,
+            "consumptionMeterId": 1,
+            "currentValue": None,
+            "readingDate": "2026-01-31T23:00:00Z",
+            "lastModified": "2026-08-16T18:00:00Z",
+        }
+    )
+    client = AsyncMock()
+    client.async_fetch_all.return_value = ((meter,), (reading,))
+    client.async_fetch_changes.return_value = ((meter,), (cleared,))
+    coordinator = FaciliooCoordinator(hass, MockConfigEntry(domain=DOMAIN, data={}), client)
+
+    await coordinator._async_update_data()
+    updated = await coordinator._async_update_data()
+
+    assert updated.total(MeterKind.WARM_WATER) == 0
+    assert updated.readings == (cleared,)
+    assert updated.readings[0].value is None
+
+
+async def test_periodic_reconciliation_removes_hard_deleted_reading(hass):
+    await hass.config.async_set_time_zone("Europe/Berlin")
+    meter = ConsumptionMeter.from_api({"id": 1, "typeId": 5, "unitOfMeasure": "M3"})
+    reading = ConsumptionReading.from_api(
+        {
+            "id": 10,
+            "consumptionMeterId": 1,
+            "currentValue": 0.5,
+            "readingDate": "2026-01-31T23:00:00Z",
+        }
+    )
+    client = AsyncMock()
+    client.async_fetch_all.side_effect = (
+        ((meter,), (reading,)),
+        ((meter,), ()),
+    )
+    coordinator = FaciliooCoordinator(hass, MockConfigEntry(domain=DOMAIN, data={}), client)
+
+    first = await coordinator._async_update_data()
+    assert first.total(MeterKind.WARM_WATER) == reading.value
+
+    state = await coordinator._store.async_load()
+    assert state is not None
+    state["last_full_sync"] = (
+        datetime.now(UTC) - RECONCILIATION_INTERVAL - timedelta(seconds=1)
+    ).isoformat()
+    await coordinator._store.async_save(state)
+
+    reconciled = await coordinator._async_update_data()
+
+    assert reconciled.total(MeterKind.WARM_WATER) == 0
+    assert len(reconciled.readings) == 1
+    assert reconciled.readings[0].id == reading.id
+    assert reconciled.readings[0].deleted is True
+    assert client.async_fetch_all.await_count == 2
+    client.async_fetch_changes.assert_not_awaited()
+
+    persisted = await coordinator._store.async_load()
+    assert persisted is not None
+    assert persisted["readings"] == []
 
 
 async def test_coordinator_restores_cached_readings_after_restart(hass):
