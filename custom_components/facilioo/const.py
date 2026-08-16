@@ -19,6 +19,7 @@ CONF_PASSWORD = "password"
 PLATFORMS = ["sensor"]
 UPDATE_INTERVAL = timedelta(days=1)
 SYNC_OVERLAP = timedelta(minutes=5)
+RECONCILIATION_INTERVAL = timedelta(days=7)
 REQUEST_TIMEOUT = 30
 PAGE_SIZE = 100
 
