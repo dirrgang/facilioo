@@ -1,6 +1,6 @@
 """Coordinator error mapping and data processing tests."""
 
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from unittest.mock import AsyncMock
 
 import pytest
@@ -84,6 +84,39 @@ async def test_coordinator_uses_changed_since_and_merges_cached_readings(hass):
     assert changed_since.tzinfo is not None
     assert changed_since <= first_updated
     assert first_updated - changed_since >= SYNC_OVERLAP - timedelta(seconds=1)
+
+
+async def test_coordinator_delta_keeps_deletion_tombstone(hass):
+    await hass.config.async_set_time_zone("Europe/Berlin")
+    meter = ConsumptionMeter.from_api({"id": 1, "typeId": 5, "unitOfMeasure": "M3"})
+    reading = ConsumptionReading.from_api(
+        {
+            "id": 10,
+            "consumptionMeterId": 1,
+            "currentValue": 0.5,
+            "readingDate": "2026-01-31T23:00:00Z",
+        }
+    )
+    deleted = ConsumptionReading.from_api(
+        {
+            "id": 10,
+            "consumptionMeterId": 1,
+            "currentValue": 0.5,
+            "readingDate": "2026-01-31T23:00:00Z",
+            "deleted": "2026-08-16T18:00:00Z",
+            "lastModified": "2026-08-16T18:00:00Z",
+        }
+    )
+    client = AsyncMock()
+    client.async_fetch_all.return_value = ((meter,), (reading,))
+    client.async_fetch_changes.return_value = ((meter,), (deleted,))
+    coordinator = FaciliooCoordinator(hass, MockConfigEntry(domain=DOMAIN, data={}), client)
+
+    await coordinator._async_update_data()
+    updated = await coordinator._async_update_data()
+
+    assert updated.total(MeterKind.WARM_WATER) == 0
+    assert updated.readings == (deleted,)
 
 
 async def test_coordinator_restores_cached_readings_after_restart(hass):
