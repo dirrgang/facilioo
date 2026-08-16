@@ -5,7 +5,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
+from datetime import UTC, datetime
 from typing import Any
 
 import aiohttp
@@ -18,6 +19,7 @@ from .const import (
     METERS_ENDPOINT,
     PAGE_SIZE,
     READINGS_ENDPOINT,
+    READINGS_SEARCH_ENDPOINT,
     REQUEST_TIMEOUT,
 )
 from .models import ConsumptionMeter, ConsumptionReading, FaciliooDataError
@@ -96,25 +98,68 @@ class FaciliooApiClient:
         raw = await self._paginate(EXTENDED_READINGS_ENDPOINT, page_size=PAGE_SIZE)
         return self._parse_items(raw, ConsumptionReading.from_api, "reading")
 
+    async def async_search_readings(
+        self,
+        *,
+        changed_since: datetime | None = None,
+        dates: Sequence[str] | None = None,
+    ) -> tuple[ConsumptionReading, ...]:
+        """Search consumption readings using Facilioo's server-side filters."""
+        body: dict[str, Any] = {"orderBy": ["readingDate asc"]}
+        if changed_since is not None:
+            if changed_since.tzinfo is None or changed_since.utcoffset() is None:
+                raise ValueError("changed_since must be timezone-aware")
+            body["changedSince"] = (
+                changed_since.astimezone(UTC).isoformat().replace("+00:00", "Z")
+            )
+        if dates is not None:
+            body["dates"] = list(dates)
+        raw = await self._paginate(
+            READINGS_SEARCH_ENDPOINT,
+            page_size=PAGE_SIZE,
+            method="POST",
+            json_body=body,
+        )
+        return self._parse_items(raw, ConsumptionReading.from_api, "reading")
+
     async def async_fetch_all(
         self,
     ) -> tuple[tuple[ConsumptionMeter, ...], tuple[ConsumptionReading, ...]]:
-        """Login and fetch all consumptions in one deliberately infrequent cycle."""
+        """Login and fetch a complete consumption snapshot."""
         await self.async_login()
         meters = await self.async_get_meters()
-        readings = await self.async_get_extended_readings()
+        readings = await self.async_search_readings()
+        return meters, readings
+
+    async def async_fetch_changes(
+        self, changed_since: datetime
+    ) -> tuple[tuple[ConsumptionMeter, ...], tuple[ConsumptionReading, ...]]:
+        """Login and fetch meters plus readings changed since the supplied watermark."""
+        await self.async_login()
+        meters = await self.async_get_meters()
+        readings = await self.async_search_readings(changed_since=changed_since)
         return meters, readings
 
     def clear_token(self) -> None:
         """Discard the in-memory token."""
         self._token = None
 
-    async def _paginate(self, endpoint: str, page_size: int) -> list[Mapping[str, Any]]:
+    async def _paginate(
+        self,
+        endpoint: str,
+        page_size: int,
+        *,
+        method: str = "GET",
+        json_body: Mapping[str, Any] | None = None,
+    ) -> list[Mapping[str, Any]]:
         items: list[Mapping[str, Any]] = []
         page = 1
         while page <= 1000:
             payload = await self._request(
-                "GET", endpoint, params={"PageSize": page_size, "PageNumber": page}
+                method,
+                endpoint,
+                params={"PageSize": page_size, "PageNumber": page},
+                json_body=json_body,
             )
             page_items, has_next = self._page(payload, page, page_size, items_seen=len(items))
             items.extend(item for item in page_items if isinstance(item, Mapping))
