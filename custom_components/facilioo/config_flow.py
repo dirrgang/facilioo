@@ -35,7 +35,7 @@ async def _validate(hass: HomeAssistant, data: dict[str, Any]) -> None:
     supported_meter_ids = {meter.id for meter in meters if meter.kind is not MeterKind.UNKNOWN}
     if not supported_meter_ids:
         raise LookupError("no supported consumption meters")
-    readings = await client.async_get_extended_readings()
+    readings = await client.async_search_readings()
     if not any(reading.meter_id in supported_meter_ids for reading in readings):
         raise LookupError("no supported consumption meters")
 
