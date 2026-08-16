@@ -95,6 +95,37 @@ def test_new_revision_replaces_estimate_and_deleted_removes_month():
     )
 
 
+def test_nullable_current_value_replaces_previous_month_value():
+    meter = ConsumptionMeter.from_api({"id": 1, "typeId": 5, "unitOfMeasure": "M3"})
+    base = {
+        "consumptionMeterId": 1,
+        "readingDate": "2025-11-30T23:00:00Z",
+    }
+    original = ConsumptionReading.from_api(
+        base
+        | {
+            "id": 10,
+            "currentValue": 1.5,
+            "lastModified": "2025-12-01T00:00:00Z",
+        }
+    )
+    cleared = ConsumptionReading.from_api(
+        base
+        | {
+            "id": 11,
+            "currentValue": None,
+            "lastModified": "2025-12-02T00:00:00Z",
+        }
+    )
+
+    selected = latest_readings_by_meter_month((meter,), (original, cleared), "Europe/Berlin")
+    assert tuple(selected.values()) == (cleared,)
+    assert cleared.value is None
+    assert MeterKind.WARM_WATER not in aggregate_monthly(
+        (meter,), (original, cleared), "Europe/Berlin"
+    )
+
+
 def test_latest_revision_without_cost_replaces_stale_cost_revision():
     meter = ConsumptionMeter.from_api({"id": 1, "typeId": 5, "unitOfMeasure": "M3"})
     base = {
@@ -165,7 +196,7 @@ def test_alternative_unit_total_requires_every_month():
     assert incomplete.total_in_different_unit(MeterKind.WARM_WATER) is None
 
 
-@pytest.mark.parametrize("value", [None, "nan", "inf", "not-a-number"])
+@pytest.mark.parametrize("value", ["nan", "inf", "not-a-number"])
 def test_invalid_values_are_rejected(value):
     with pytest.raises(FaciliooDataError):
         ConsumptionReading.from_api(
