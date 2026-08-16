@@ -101,20 +101,28 @@ class FaciliooCoordinator(DataUpdateCoordinator[ConsumptionData]):
         if not isinstance(saved, dict):
             return {}, None
 
-        readings: dict[int, ConsumptionReading] = {}
         raw_readings = saved.get("readings")
-        if isinstance(raw_readings, list):
-            for raw in raw_readings:
-                if not isinstance(raw, Mapping):
-                    continue
-                try:
-                    reading = _deserialize_reading(raw)
-                except FaciliooDataError as err:
-                    _LOGGER.warning("Skipping malformed cached Facilioo reading: %s", err)
-                    continue
-                readings[reading.id] = reading
+        if not isinstance(raw_readings, list):
+            return {}, None
 
-        return readings, _parse_watermark(saved.get("last_sync"))
+        readings: dict[int, ConsumptionReading] = {}
+        cache_valid = True
+        for raw in raw_readings:
+            if not isinstance(raw, Mapping):
+                cache_valid = False
+                continue
+            try:
+                reading = _deserialize_reading(raw)
+            except FaciliooDataError as err:
+                _LOGGER.warning("Ignoring invalid Facilioo sync cache and rebuilding: %s", err)
+                cache_valid = False
+                continue
+            readings[reading.id] = reading
+
+        watermark = _parse_watermark(saved.get("last_sync"))
+        if not cache_valid or watermark is None:
+            return {}, None
+        return readings, watermark
 
     async def _async_save_sync_state(
         self, readings: Mapping[int, ConsumptionReading], watermark: datetime
