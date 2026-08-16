@@ -109,9 +109,7 @@ class FaciliooApiClient:
         if changed_since is not None:
             if changed_since.tzinfo is None or changed_since.utcoffset() is None:
                 raise ValueError("changed_since must be timezone-aware")
-            body["changedSince"] = (
-                changed_since.astimezone(UTC).isoformat().replace("+00:00", "Z")
-            )
+            body["changedSince"] = changed_since.astimezone(UTC).isoformat().replace("+00:00", "Z")
         if dates is not None:
             body["dates"] = list(dates)
         raw = await self._paginate(
