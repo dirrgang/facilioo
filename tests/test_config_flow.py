@@ -134,9 +134,7 @@ async def test_reauthentication_rejects_different_account(hass, enable_custom_in
     assert result["reason"] == "unique_id_mismatch"
 
 
-async def test_reauthentication_migrates_legacy_email_unique_id(
-    hass, enable_custom_integrations
-):
+async def test_reauthentication_migrates_legacy_email_unique_id(hass, enable_custom_integrations):
     entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id=legacy_account_unique_id("resident@example.test"),
