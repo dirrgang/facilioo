@@ -73,9 +73,9 @@ class ConsumptionType:
         if not isinstance(utility_raw, str) or not utility_raw.strip():
             raise FaciliooDataError("Invalid consumption type utility name")
         meter_name_raw = raw.get("meterName")
-        meter_name = (
-            str(meter_name_raw).strip() if meter_name_raw is not None and str(meter_name_raw).strip() else None
-        )
+        meter_name = None
+        if meter_name_raw is not None:
+            meter_name = str(meter_name_raw).strip() or None
         return cls(
             id=_int(raw.get("id"), "consumption type id"),
             meter_name=meter_name,
