@@ -18,6 +18,7 @@
       "invalid_auth": "The email address or password is invalid",
       "mfa_required": "This account requires multi-factor authentication, which this integration cannot complete yet",
       "no_consumption_data": "No supported warm-water or heating meter is available",
+      "not_authorized": "This Facilioo account is not permitted to access the required consumption data",
       "rate_limited": "Facilioo temporarily rate-limited the request; try again later",
       "unknown_response": "Facilioo returned an unexpected response"
     },

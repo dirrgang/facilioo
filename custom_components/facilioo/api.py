@@ -15,6 +15,7 @@ from .const import (
     ACCOUNT_MYSELF_ENDPOINT,
     API_VERSION,
     BASE_URL,
+    CONSUMPTION_TYPES_ENDPOINT,
     EXTENDED_READINGS_ENDPOINT,
     LOGIN_ENDPOINT,
     METERS_ENDPOINT,
@@ -23,7 +24,13 @@ from .const import (
     READINGS_SEARCH_ENDPOINT,
     REQUEST_TIMEOUT,
 )
-from .models import ConsumptionMeter, ConsumptionReading, FaciliooDataError
+from .models import (
+    ConsumptionMeter,
+    ConsumptionReading,
+    ConsumptionType,
+    FaciliooDataError,
+    resolve_meter_types,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,6 +41,10 @@ class FaciliooError(Exception):
 
 class FaciliooAuthenticationError(FaciliooError):
     """Credentials were rejected or authorization expired."""
+
+
+class FaciliooAuthorizationError(FaciliooError):
+    """The authenticated account is not allowed to access a resource."""
 
 
 class FaciliooMfaRequiredError(FaciliooAuthenticationError):
@@ -109,6 +120,17 @@ class FaciliooApiClient:
         raw = await self._paginate(METERS_ENDPOINT, page_size=PAGE_SIZE)
         return self._parse_items(raw, ConsumptionMeter.from_api, "meter")
 
+    async def async_get_consumption_types(self) -> tuple[ConsumptionType, ...]:
+        """Return ConsumptionType metadata available to the authenticated account."""
+        raw = await self._paginate(CONSUMPTION_TYPES_ENDPOINT, page_size=PAGE_SIZE)
+        return self._parse_items(raw, ConsumptionType.from_api, "consumption type")
+
+    async def async_get_resolved_meters(self) -> tuple[ConsumptionMeter, ...]:
+        """Return meters classified through their referenced ConsumptionType entities."""
+        meters = await self.async_get_meters()
+        consumption_types = await self.async_get_consumption_types()
+        return resolve_meter_types(meters, consumption_types)
+
     async def async_get_readings(self) -> tuple[ConsumptionReading, ...]:
         raw = await self._paginate(READINGS_ENDPOINT, page_size=PAGE_SIZE)
         return self._parse_items(raw, ConsumptionReading.from_api, "reading")
@@ -144,7 +166,7 @@ class FaciliooApiClient:
     ) -> tuple[tuple[ConsumptionMeter, ...], tuple[ConsumptionReading, ...]]:
         """Login and fetch a complete consumption snapshot."""
         await self.async_login()
-        meters = await self.async_get_meters()
+        meters = await self.async_get_resolved_meters()
         readings = await self.async_search_readings()
         return meters, readings
 
@@ -153,7 +175,7 @@ class FaciliooApiClient:
     ) -> tuple[tuple[ConsumptionMeter, ...], tuple[ConsumptionReading, ...]]:
         """Login and fetch meters plus readings changed since the supplied watermark."""
         await self.async_login()
-        meters = await self.async_get_meters()
+        meters = await self.async_get_resolved_meters()
         readings = await self.async_search_readings(changed_since=changed_since)
         return meters, readings
 
@@ -269,9 +291,12 @@ class FaciliooApiClient:
                     json=json_body,
                 )
                 async with response:
-                    if response.status in (401, 403):
+                    if response.status == 401:
                         self._token = None
+                        self._account_id = None
                         raise FaciliooAuthenticationError("Authentication failed")
+                    if response.status == 403:
+                        raise FaciliooAuthorizationError("Facilioo access forbidden")
                     if response.status == 429:
                         retry = response.headers.get("Retry-After")
                         retry_seconds = int(retry) if retry and retry.isdigit() else None

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from enum import StrEnum
@@ -60,6 +60,35 @@ def _datetime(value: Any, field: str) -> datetime:
 
 
 @dataclass(frozen=True, slots=True)
+class ConsumptionType:
+    """Facilioo metadata describing a consumption meter type."""
+
+    id: int
+    meter_name: str | None
+    utility_name: str
+
+    @classmethod
+    def from_api(cls, raw: Mapping[str, Any]) -> ConsumptionType:
+        utility_raw = raw.get("utilityName")
+        if not isinstance(utility_raw, str) or not utility_raw.strip():
+            raise FaciliooDataError("Invalid consumption type utility name")
+        meter_name_raw = raw.get("meterName")
+        meter_name = None
+        if meter_name_raw is not None:
+            meter_name = str(meter_name_raw).strip() or None
+        return cls(
+            id=_int(raw.get("id"), "consumption type id"),
+            meter_name=meter_name,
+            utility_name=utility_raw.strip(),
+        )
+
+    @property
+    def label(self) -> str:
+        """Return all human-readable type metadata used for classification."""
+        return " ".join(part for part in (self.meter_name, self.utility_name) if part)
+
+
+@dataclass(frozen=True, slots=True)
 class ConsumptionMeter:
     """A Facilioo consumption meter."""
 
@@ -89,18 +118,64 @@ class ConsumptionMeter:
         return cls(meter_id, type_id, unit, number, label, kind)
 
 
-def classify_meter(type_id: int | None, unit: str | None, label: str | None) -> MeterKind:
-    """Classify from documented type/unit metadata, with labels as fallback."""
-    normalized = (label or "").casefold()
+def classify_meter(
+    type_id: int | None,
+    unit: str | None,
+    label: str | None,
+    type_label: str | None = None,
+) -> MeterKind:
+    """Classify from ConsumptionType metadata with conservative fallbacks."""
+    normalized_type = (type_label or "").casefold()
+    normalized_meter = (label or "").casefold()
+    warm_water_terms = ("warmwasser", "warm water", "hot water")
+    heating_terms = ("heiz", "heating", "wärme", "heat")
+
+    if type_label is not None:
+        if unit == UNIT_M3 and any(term in normalized_type for term in warm_water_terms):
+            return MeterKind.WARM_WATER
+        if unit == UNIT_KWH and any(term in normalized_type for term in heating_terms):
+            return MeterKind.HEATING
+        return MeterKind.UNKNOWN
+
+    # Known IDs from current Facilioo data remain a compatibility fallback when
+    # ConsumptionType metadata is unavailable.
     if type_id == TYPE_WARM_WATER and unit == UNIT_M3:
         return MeterKind.WARM_WATER
     if type_id == TYPE_HEATING and unit == UNIT_KWH:
         return MeterKind.HEATING
-    if unit == UNIT_M3 and any(term in normalized for term in ("warmwasser", "warm water")):
+
+    if unit == UNIT_M3 and any(term in normalized_meter for term in warm_water_terms):
         return MeterKind.WARM_WATER
-    if unit == UNIT_KWH and any(term in normalized for term in ("heiz", "heating", "wärme")):
+    if unit == UNIT_KWH and any(term in normalized_meter for term in heating_terms):
         return MeterKind.HEATING
     return MeterKind.UNKNOWN
+
+
+def resolve_meter_types(
+    meters: tuple[ConsumptionMeter, ...],
+    consumption_types: tuple[ConsumptionType, ...],
+) -> tuple[ConsumptionMeter, ...]:
+    """Resolve meter kinds and labels through Facilioo's ConsumptionType entities."""
+    types_by_id = {consumption_type.id: consumption_type for consumption_type in consumption_types}
+    resolved: list[ConsumptionMeter] = []
+    for meter in meters:
+        consumption_type = types_by_id.get(meter.type_id) if meter.type_id is not None else None
+        if consumption_type is None:
+            resolved.append(meter)
+            continue
+        resolved.append(
+            replace(
+                meter,
+                label=meter.label or consumption_type.label,
+                kind=classify_meter(
+                    meter.type_id,
+                    meter.unit,
+                    meter.label,
+                    consumption_type.label,
+                ),
+            )
+        )
+    return tuple(resolved)
 
 
 @dataclass(frozen=True, slots=True)
