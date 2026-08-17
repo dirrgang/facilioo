@@ -11,10 +11,12 @@ import pytest
 from custom_components.facilioo.api import (
     FaciliooApiClient,
     FaciliooAuthenticationError,
+    FaciliooAuthorizationError,
     FaciliooConnectionError,
     FaciliooRateLimitError,
     FaciliooResponseError,
 )
+from custom_components.facilioo.models import MeterKind
 
 
 class FakeResponse:
@@ -54,7 +56,9 @@ class FakeSession:
 
 @pytest.mark.asyncio
 async def test_successful_login_returns_account_id_without_credentials_in_headers():
-    session = FakeSession([FakeResponse({"accessToken": "secret-token", "account": {"id": 12345}})])
+    session = FakeSession(
+        [FakeResponse({"accessToken": "secret-token", "account": {"id": 12345}})]
+    )
     client = FaciliooApiClient(session, "resident@example.test", "secret-password")
 
     account_id = await client.async_login()
@@ -113,6 +117,32 @@ async def test_wrong_credentials_are_safe():
 
 
 @pytest.mark.asyncio
+async def test_401_clears_authentication_state():
+    client = FaciliooApiClient(FakeSession([FakeResponse(status=401)]), "x", "y")
+    client._token = "token"
+    client._account_id = 12345
+
+    with pytest.raises(FaciliooAuthenticationError):
+        await client.async_get_meters()
+
+    assert client._token is None
+    assert client.account_id is None
+
+
+@pytest.mark.asyncio
+async def test_403_is_authorization_error_and_preserves_authentication_state():
+    client = FaciliooApiClient(FakeSession([FakeResponse(status=403)]), "x", "y")
+    client._token = "token"
+    client._account_id = 12345
+
+    with pytest.raises(FaciliooAuthorizationError):
+        await client.async_get_meters()
+
+    assert client._token == "token"
+    assert client.account_id == 12345
+
+
+@pytest.mark.asyncio
 async def test_server_timeout_rate_limit_and_invalid_json():
     for response, exception in (
         (FakeResponse(status=503), FaciliooConnectionError),
@@ -162,6 +192,48 @@ async def test_pagination_uses_received_count_when_server_caps_page_size():
 
     assert len(items) == 150
     assert session.calls[1][2]["params"]["PageNumber"] == 2
+
+
+@pytest.mark.asyncio
+async def test_consumption_types_resolve_unknown_meter_ids():
+    session = FakeSession(
+        [
+            FakeResponse(
+                {
+                    "items": [
+                        {"id": 1, "typeId": 700, "unitOfMeasure": "M3"},
+                        {"id": 2, "typeId": 701, "unitOfMeasure": "KWH"},
+                    ],
+                    "totalCount": 2,
+                }
+            ),
+            FakeResponse(
+                {
+                    "items": [
+                        {
+                            "id": 700,
+                            "meterName": "Warmwasserzähler",
+                            "utilityName": "Warmwasser",
+                        },
+                        {
+                            "id": 701,
+                            "meterName": "Wärmemengenzähler",
+                            "utilityName": "Heizung",
+                        },
+                    ],
+                    "totalCount": 2,
+                }
+            ),
+        ]
+    )
+    client = FaciliooApiClient(session, "x", "y")
+    client._token = "token"
+
+    meters = await client.async_get_resolved_meters()
+
+    assert [meter.kind for meter in meters] == [MeterKind.WARM_WATER, MeterKind.HEATING]
+    assert meters[0].label == "Warmwasserzähler Warmwasser"
+    assert session.calls[1][1].endswith("/api/consumption-types")
 
 
 @pytest.mark.asyncio
