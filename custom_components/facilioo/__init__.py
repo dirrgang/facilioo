@@ -76,7 +76,8 @@ def _migrate_unique_id(hass: HomeAssistant, entry: ConfigEntry, account_id: int 
     )
     if duplicate is not None:
         _LOGGER.warning(
-            "Cannot migrate Facilioo config entry %s to account ID %s because another entry already uses it",
+            "Cannot migrate Facilioo config entry %s to account ID %s because "
+            "another entry already uses it",
             entry.entry_id,
             unique_id,
         )
