@@ -18,6 +18,7 @@
       "invalid_auth": "E-Mail-Adresse oder Passwort ist ungültig",
       "mfa_required": "Dieses Konto erfordert Mehrfaktor-Authentifizierung, die diese Integration derzeit nicht abschließen kann",
       "no_consumption_data": "Kein unterstützter Warmwasser- oder Heizenergiezähler verfügbar",
+      "not_authorized": "Dieses Facilioo-Konto darf nicht auf die benötigten Verbrauchsdaten zugreifen",
       "rate_limited": "Facilioo begrenzt Anfragen vorübergehend; versuche es später erneut",
       "unknown_response": "Facilioo hat eine unerwartete Antwort geliefert"
     },
