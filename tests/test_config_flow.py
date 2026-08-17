@@ -81,6 +81,25 @@ async def test_errors_are_presented(hass, enable_custom_integrations):
     assert result["errors"] == {"base": "cannot_connect"}
 
 
+async def test_authorization_error_is_not_presented_as_invalid_credentials(
+    hass, enable_custom_integrations
+):
+    from custom_components.facilioo.api import FaciliooAuthorizationError
+
+    with patch(
+        "custom_components.facilioo.config_flow._validate",
+        new=AsyncMock(side_effect=FaciliooAuthorizationError("forbidden")),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": SOURCE_USER},
+            data={CONF_EMAIL: "resident@example.test", CONF_PASSWORD: "password"},
+        )
+
+    assert result["type"] == "form"
+    assert result["errors"] == {"base": "not_authorized"}
+
+
 async def test_reauthentication_updates_credentials_for_same_account(
     hass, enable_custom_integrations
 ):
