@@ -12,6 +12,7 @@ from typing import Any
 import aiohttp
 
 from .const import (
+    ACCOUNT_MYSELF_ENDPOINT,
     API_VERSION,
     BASE_URL,
     EXTENDED_READINGS_ENDPOINT,
@@ -63,9 +64,16 @@ class FaciliooApiClient:
         self._email = email
         self._password = password
         self._token: str | None = None
+        self._account_id: int | None = None
 
-    async def async_login(self) -> None:
-        """Authenticate and retain the access token in memory only."""
+    @property
+    def account_id(self) -> int | None:
+        """Return the authenticated Facilioo account ID, if known."""
+        return self._account_id
+
+    async def async_login(self) -> int:
+        """Authenticate and return the stable Facilioo account ID."""
+        self._account_id = None
         data = await self._request(
             "POST",
             LOGIN_ENDPOINT,
@@ -85,6 +93,17 @@ class FaciliooApiClient:
                 raise FaciliooMfaRequiredError("Multi-factor authentication is required")
             raise FaciliooResponseError("Login response did not contain an access token")
         self._token = token
+
+        account_id = self._extract_account_id(data)
+        if account_id is None:
+            account = await self._request("GET", ACCOUNT_MYSELF_ENDPOINT)
+            account_id = self._extract_account_id(account)
+        if account_id is None:
+            self._token = None
+            raise FaciliooResponseError("Facilioo account response did not contain a valid ID")
+
+        self._account_id = account_id
+        return account_id
 
     async def async_get_meters(self) -> tuple[ConsumptionMeter, ...]:
         raw = await self._paginate(METERS_ENDPOINT, page_size=PAGE_SIZE)
@@ -139,8 +158,9 @@ class FaciliooApiClient:
         return meters, readings
 
     def clear_token(self) -> None:
-        """Discard the in-memory token."""
+        """Discard authentication state held only in memory."""
         self._token = None
+        self._account_id = None
 
     async def _paginate(
         self,
@@ -203,6 +223,25 @@ class FaciliooApiClient:
             except FaciliooDataError as err:
                 _LOGGER.warning("Skipping malformed Facilioo %s: %s", label, err)
         return tuple(parsed)
+
+    @classmethod
+    def _extract_account_id(cls, payload: Any) -> int | None:
+        """Extract an account ID from either login or account responses."""
+        if not isinstance(payload, Mapping):
+            return None
+        account_id = payload.get("id")
+        if cls._valid_account_id(account_id):
+            return account_id
+        account = payload.get("account")
+        if isinstance(account, Mapping):
+            account_id = account.get("id")
+            if cls._valid_account_id(account_id):
+                return account_id
+        return None
+
+    @staticmethod
+    def _valid_account_id(value: Any) -> bool:
+        return isinstance(value, int) and not isinstance(value, bool) and value > 0
 
     async def _request(
         self,
