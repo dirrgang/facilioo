@@ -130,13 +130,15 @@ def classify_meter(
     warm_water_terms = ("warmwasser", "warm water", "hot water")
     heating_terms = ("heiz", "heating", "wärme", "heat")
 
-    if unit == UNIT_M3 and any(term in normalized_type for term in warm_water_terms):
-        return MeterKind.WARM_WATER
-    if unit == UNIT_KWH and any(term in normalized_type for term in heating_terms):
-        return MeterKind.HEATING
+    if type_label is not None:
+        if unit == UNIT_M3 and any(term in normalized_type for term in warm_water_terms):
+            return MeterKind.WARM_WATER
+        if unit == UNIT_KWH and any(term in normalized_type for term in heating_terms):
+            return MeterKind.HEATING
+        return MeterKind.UNKNOWN
 
-    # Known IDs from current Facilioo data remain a compatibility fallback, not the
-    # primary classification mechanism.
+    # Known IDs from current Facilioo data remain a compatibility fallback when
+    # ConsumptionType metadata is unavailable.
     if type_id == TYPE_WARM_WATER and unit == UNIT_M3:
         return MeterKind.WARM_WATER
     if type_id == TYPE_HEATING and unit == UNIT_KWH:
