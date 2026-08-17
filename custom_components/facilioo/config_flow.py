@@ -13,6 +13,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .api import (
     FaciliooApiClient,
     FaciliooAuthenticationError,
+    FaciliooAuthorizationError,
     FaciliooConnectionError,
     FaciliooMfaRequiredError,
     FaciliooRateLimitError,
@@ -31,7 +32,7 @@ def legacy_account_unique_id(email: str) -> str:
 async def _validate(hass: HomeAssistant, data: dict[str, Any]) -> int:
     client = FaciliooApiClient(async_get_clientsession(hass), data[CONF_EMAIL], data[CONF_PASSWORD])
     account_id = await client.async_login()
-    meters = await client.async_get_meters()
+    meters = await client.async_get_resolved_meters()
     supported_meter_ids = {meter.id for meter in meters if meter.kind is not MeterKind.UNKNOWN}
     if not supported_meter_ids:
         raise LookupError("no supported consumption meters")
@@ -114,6 +115,8 @@ class FaciliooConfigFlow(ConfigFlow, domain=DOMAIN):
             return None, "mfa_required"
         except FaciliooAuthenticationError:
             return None, "invalid_auth"
+        except FaciliooAuthorizationError:
+            return None, "not_authorized"
         except FaciliooRateLimitError:
             return None, "rate_limited"
         except FaciliooConnectionError:
