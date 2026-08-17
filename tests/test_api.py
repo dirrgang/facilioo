@@ -53,13 +53,54 @@ class FakeSession:
 
 
 @pytest.mark.asyncio
-async def test_successful_login_does_not_put_credentials_in_headers():
-    session = FakeSession([FakeResponse({"accessToken": "secret-token"})])
+async def test_successful_login_returns_account_id_without_credentials_in_headers():
+    session = FakeSession(
+        [FakeResponse({"accessToken": "secret-token", "account": {"id": 12345}})]
+    )
     client = FaciliooApiClient(session, "resident@example.test", "secret-password")
-    await client.async_login()
+
+    account_id = await client.async_login()
+
+    assert account_id == 12345
+    assert client.account_id == 12345
     _, _, kwargs = session.calls[0]
     assert "Authorization" not in kwargs["headers"]
     assert kwargs["json"]["skipMultiFactorAuthentication"] is False
+
+
+@pytest.mark.asyncio
+async def test_login_falls_back_to_myself_endpoint_for_account_id():
+    session = FakeSession(
+        [
+            FakeResponse({"accessToken": "secret-token"}),
+            FakeResponse({"id": 54321}),
+        ]
+    )
+    client = FaciliooApiClient(session, "resident@example.test", "secret-password")
+
+    account_id = await client.async_login()
+
+    assert account_id == 54321
+    method, url, kwargs = session.calls[1]
+    assert method == "GET"
+    assert url.endswith("/api/accounts/myself")
+    assert kwargs["headers"]["Authorization"] == "Bearer secret-token"
+
+
+@pytest.mark.asyncio
+async def test_login_rejects_missing_account_id():
+    session = FakeSession(
+        [
+            FakeResponse({"accessToken": "secret-token"}),
+            FakeResponse({}),
+        ]
+    )
+    client = FaciliooApiClient(session, "resident@example.test", "secret-password")
+
+    with pytest.raises(FaciliooResponseError):
+        await client.async_login()
+
+    assert client.account_id is None
 
 
 @pytest.mark.asyncio
@@ -98,7 +139,11 @@ async def test_pagination_requests_every_page(meter_payload):
     first["totalCount"] = 3
     second = {"items": meter_payload["items"][2:], "totalCount": 3}
     session = FakeSession(
-        [FakeResponse({"accessToken": "token"}), FakeResponse(first), FakeResponse(second)]
+        [
+            FakeResponse({"accessToken": "token", "account": {"id": 12345}}),
+            FakeResponse(first),
+            FakeResponse(second),
+        ]
     )
     client = FaciliooApiClient(session, "x", "y")
     await client.async_login()
