@@ -56,9 +56,7 @@ class FakeSession:
 
 @pytest.mark.asyncio
 async def test_successful_login_returns_account_id_without_credentials_in_headers():
-    session = FakeSession(
-        [FakeResponse({"accessToken": "secret-token", "account": {"id": 12345}})]
-    )
+    session = FakeSession([FakeResponse({"accessToken": "secret-token", "account": {"id": 12345}})])
     client = FaciliooApiClient(session, "resident@example.test", "secret-password")
 
     account_id = await client.async_login()
