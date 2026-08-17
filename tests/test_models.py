@@ -9,12 +9,14 @@ from custom_components.facilioo.models import (
     ConsumptionData,
     ConsumptionMeter,
     ConsumptionReading,
+    ConsumptionType,
     FaciliooDataError,
     MeterKind,
     MonthlyConsumption,
     aggregate_monthly,
     billing_month,
     latest_readings_by_meter_month,
+    resolve_meter_types,
 )
 
 
@@ -25,6 +27,39 @@ def test_meter_classification(meter_payload):
         MeterKind.WARM_WATER,
         MeterKind.UNKNOWN,
     ]
+
+
+def test_consumption_type_metadata_classifies_unknown_ids():
+    meters = (
+        ConsumptionMeter.from_api({"id": 1, "typeId": 700, "unitOfMeasure": "M3"}),
+        ConsumptionMeter.from_api({"id": 2, "typeId": 701, "unitOfMeasure": "KWH"}),
+    )
+    consumption_types = (
+        ConsumptionType.from_api(
+            {"id": 700, "meterName": "Warmwasserzähler", "utilityName": "Warmwasser"}
+        ),
+        ConsumptionType.from_api(
+            {"id": 701, "meterName": "Wärmemengenzähler", "utilityName": "Heizung"}
+        ),
+    )
+
+    resolved = resolve_meter_types(meters, consumption_types)
+
+    assert [meter.kind for meter in resolved] == [MeterKind.WARM_WATER, MeterKind.HEATING]
+    assert resolved[0].label == "Warmwasserzähler Warmwasser"
+    assert resolved[1].label == "Wärmemengenzähler Heizung"
+
+
+def test_consumption_type_resolution_keeps_unknown_utility_unknown():
+    meter = ConsumptionMeter.from_api({"id": 1, "typeId": 700, "unitOfMeasure": "M3"})
+    consumption_type = ConsumptionType.from_api(
+        {"id": 700, "meterName": "Wasserzähler", "utilityName": "Kaltwasser"}
+    )
+
+    resolved = resolve_meter_types((meter,), (consumption_type,))
+
+    assert resolved[0].kind is MeterKind.UNKNOWN
+    assert resolved[0].label == "Wasserzähler Kaltwasser"
 
 
 def test_label_fallback_and_unknown_unit():
