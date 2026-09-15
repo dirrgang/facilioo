@@ -1,5 +1,5 @@
 # Created by https://www.toptal.com/developers/gitignore/api/python,homeassistant
-# Edit at https://www.toptal.com/developers/gitignore?templates=python,homeassistant
+# Adapted for a Home Assistant custom-integration repository: custom_components/ is source code.
 
 ### HomeAssistant ###
 # Files with personal details
@@ -41,9 +41,6 @@ lib
 home-assistant.log
 home-assistant.log.*
 ozw_log.txt
-
-# Development files
-custom_components
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
@@ -146,7 +143,7 @@ ipython_config.py
 #   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
 #   This is especially recommended for binary packages to ensure reproducibility, and is more
 #   commonly ignored for libraries.
-#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
+#   https://python-poetry.org/docs/basic-usage/#commit-poetrylock-file-in-version-control
 #poetry.lock
 
 # pdm
@@ -217,4 +214,4 @@ poetry.toml
 # LSP config files
 pyrightconfig.json
 
-# End of https://www.toptal.com/developers/gitignore/api/python,homeassistant
+# End of adapted Python/HomeAssistant ignore rules
