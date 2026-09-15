@@ -1,0 +1,38 @@
+[tools]
+python = "3.14"
+uv = "0.12.13"
+prek = "0.5.2"
+
+[tasks.sync]
+description = "Synchronize the locked development environment"
+run = "uv sync --locked --all-groups"
+
+[tasks.setup]
+description = "Set up the development environment"
+depends = ["sync"]
+run = "prek install"
+
+[tasks.lint]
+description = "Run Ruff lint and formatting checks"
+depends = ["sync"]
+run = [
+    "uv run --no-sync ruff check .",
+    "uv run --no-sync ruff format --check .",
+]
+
+[tasks.fix]
+description = "Apply Ruff fixes and formatting"
+depends = ["sync"]
+run = [
+    "uv run --no-sync ruff check --fix .",
+    "uv run --no-sync ruff format .",
+]
+
+[tasks.test]
+description = "Run tests with coverage"
+depends = ["sync"]
+run = "uv run --no-sync pytest --cov=custom_components.facilioo --cov-report=term-missing"
+
+[tasks.check]
+description = "Run all quality gates"
+depends = ["lint", "test"]
