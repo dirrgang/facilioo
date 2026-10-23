@@ -1,10 +1,10 @@
 # Home Assistant Facilioo
 
-An unofficial Home Assistant custom integration for monthly consumption data from
-[facilioo](https://www.facilioo.de/). It is intended for normal resident accounts and may also
-work with white-label property-management apps whose accounts use the regular Facilioo backend.
-It has been designed from the API behavior observed with the MÜNCH Immo App, but compatibility
-with every Facilioo tenant or white-label app is not guaranteed.
+An unofficial Home Assistant custom integration for monthly heating, hot-water consumption,
+and cost data from [facilioo](https://www.facilioo.de/). It is intended for normal resident accounts
+and may also work with white-label property-management apps whose accounts use the regular Facilioo
+backend. It has been designed from the API behavior observed with the MÜNCH Immo App, but
+compatibility with every Facilioo tenant or white-label app is not guaranteed.
 
 This project is independent, community-maintained, and is not affiliated with or endorsed by
 facilioo or MÜNCH.
@@ -58,7 +58,7 @@ Home Assistant 2026.4.0 or newer is required.
 
 1. Open HACS and select **Integrations**.
 2. Open the menu and choose **Custom repositories**.
-3. Add this GitHub repository URL with category **Integration**.
+3. Add `https://github.com/dirrgang/home-assistant-facilioo` with category **Integration**.
 4. Install **Facilioo** and restart Home Assistant.
 
 ### Manual
