@@ -1,6 +1,6 @@
 [tools]
 python = "3.14"
-uv = "0.12.13"
+uv = "0.13.5"
 prek = "0.5.2"
 
 [tasks.sync]
