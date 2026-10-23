@@ -29,31 +29,59 @@ independently tested with this integration.
 - **Historical reference:** An older published account of Facilioo adoption;
   continued use is **not confirmed**.
 
-**Integration compatibility** is **unverified** for every organization in the
-tables below. The status is deliberately not inferred from branding, login
-screens, portal URLs, or Facilioo's public features.
+## Integration compatibility statuses
+
+The **Compatibility status** column concerns this integration's technical
+compatibility with a particular **resident-account portal**, *not* the quality
+of the evidence that the property manager uses Facilioo. It must not be
+inferred from branding, app listings, privacy policies, or the presence of
+a Facilioo-powered portal.
+
+- **Unverified:** No specific resident-account backend or end-to-end
+  integration compatibility has been verified. This is the default for all
+  listed property managers, including historical references.
+- **Backend confirmed:** The property manager or platform provider has
+  specifically confirmed relevant resident API, authentication, and/or
+  consumption-data behavior for a defined portal. This does **not** establish
+  that the Home Assistant integration works there.
+- **Community tested:** A user has supplied a credible, anonymized
+  end-to-end integration report, identifying the integration version, account
+  type, authentication outcome, and available meter categories. This is
+  **not** a blanket compatibility or maintenance guarantee.
+- **Maintainer supported:** The integration maintainers have validated a
+  specific portal/account variant and explicitly documented its supported
+  scope and limitations.
+- **Limited / incompatible:** A concrete compatibility limitation or
+  failure has been reproduced and documented for a defined portal/account
+  variant; identify what works and what does not.
+
+These are **evidence labels, not automatic stages**. Multiple labels may
+apply (for example, *Backend confirmed; Community tested*), and a label
+must be reviewed or removed if backend behavior changes. Each status other
+than *Unverified* must be accompanied by a link to an appropriately
+anonymized public report or other verifiable source.
 
 ## Publicly documented portals and services
 
-| Property manager | Publicly described portal / relationship | Evidence | Source | Checked |
-| --- | --- | --- | --- | --- |
-| Clevesta GmbH | Facilioo customer/owner portal; privacy notice also mentions a separate Impower portal | Customer portal + service disclosure | [Privacy notice](https://clevesta.de/legal/datenschutz) | 2026-10-23 |
-| Cornely & Roth GmbH | Facilioo customer portal/app; another service portal is also offered | Customer portal/app | [Customer login](https://www.cornely-roth.de/kundenlogin) | 2026-10-23 |
-| GfH – Gesellschaft für Hausverwaltung mbH (Saarbrücken-Dudweiler) | “Zuhause – effizient verwaltet” customer app and Facilioo portal | Customer portal/app | [Customer portal](https://gfhdudweiler.de/kundenportal/) | 2026-10-23 |
-| Haustakt GmbH | Facilioo customer portal available by web browser or app | Customer portal/app | [Customer portal](https://www.haustakt.com/kundenportal) | 2026-10-23 |
-| Immo-Agentur MGL GmbH | Facilioo property portal for selected customers | Customer portal | [Property management](https://www.immo-mgl.de/verwaltung) | 2026-10-23 |
-| Kassenbrock Hausverwaltung | “Kassenbrock HV App powered by facilioo” and customer portal | Branded customer app | [App information](https://www.kassenbrock.de/unsere-app/) | 2026-10-23 |
-| KREMER Hausverwaltungen GmbH | Facilioo online portal/app used for customer-data administration | Service disclosure | [Customer privacy notice](https://www.kremerhv.de/datenschutzhinweise) | 2026-10-23 |
-| MoVida | “MoVida Mieterportal” provided through a Facilioo platform | Customer portal + service disclosure | [Privacy notice](https://movidaliving.de/datenschutzerklaerung/) | 2026-10-23 |
-| RS Hausverwaltung | Facilioo customer portal; the website also describes a planned transition to Facilioo Neo | Customer portal/app | [Customer portal](https://www.rshv.de/kundenportal/) | 2026-10-23 |
-| Strauß & Bock Immobilien | Facilioo customer portal for owners, tenants, and contractors | Customer portal/app | [Customer login](https://strauss-bock.de/kundenlogin/) | 2026-10-23 |
-| Wolf-Immobilien-Management GmbH | Facilioo app for tenants and owners | Customer app | [Management services](https://www.w-i-m-immobilien.de/verwaltung) | 2026-10-23 |
+| Property manager | Publicly described portal / relationship | Evidence | Compatibility status | Source | Checked |
+| --- | --- | --- | --- | --- | --- |
+| Clevesta GmbH | Facilioo customer/owner portal; privacy notice also mentions a separate Impower portal | Customer portal + service disclosure | Unverified | [Privacy notice](https://clevesta.de/legal/datenschutz) | 2026-10-23 |
+| Cornely & Roth GmbH | Facilioo customer portal/app; another service portal is also offered | Customer portal/app | Unverified | [Customer login](https://www.cornely-roth.de/kundenlogin) | 2026-10-23 |
+| GfH – Gesellschaft für Hausverwaltung mbH (Saarbrücken-Dudweiler) | “Zuhause – effizient verwaltet” customer app and Facilioo portal | Customer portal/app | Unverified | [Customer portal](https://gfhdudweiler.de/kundenportal/) | 2026-10-23 |
+| Haustakt GmbH | Facilioo customer portal available by web browser or app | Customer portal/app | Unverified | [Customer portal](https://www.haustakt.com/kundenportal) | 2026-10-23 |
+| Immo-Agentur MGL GmbH | Facilioo property portal for selected customers | Customer portal | Unverified | [Property management](https://www.immo-mgl.de/verwaltung) | 2026-10-23 |
+| Kassenbrock Hausverwaltung | “Kassenbrock HV App powered by facilioo” and customer portal | Branded customer app | Unverified | [App information](https://www.kassenbrock.de/unsere-app/) | 2026-10-23 |
+| KREMER Hausverwaltungen GmbH | Facilioo online portal/app used for customer-data administration | Service disclosure | Unverified | [Customer privacy notice](https://www.kremerhv.de/datenschutzhinweise) | 2026-10-23 |
+| MoVida | “MoVida Mieterportal” provided through a Facilioo platform | Customer portal + service disclosure | Unverified | [Privacy notice](https://movidaliving.de/datenschutzerklaerung/) | 2026-10-23 |
+| RS Hausverwaltung | Facilioo customer portal; the website also describes a planned transition to Facilioo Neo | Customer portal/app | Unverified | [Customer portal](https://www.rshv.de/kundenportal/) | 2026-10-23 |
+| Strauß & Bock Immobilien | Facilioo customer portal for owners, tenants, and contractors | Customer portal/app | Unverified | [Customer login](https://strauss-bock.de/kundenlogin/) | 2026-10-23 |
+| Wolf-Immobilien-Management GmbH | Facilioo app for tenants and owners | Customer app | Unverified | [Management services](https://www.w-i-m-immobilien.de/verwaltung) | 2026-10-23 |
 
 ## Historical reference — current use unconfirmed
 
-| Property manager | What the source establishes | Evidence | Source | Checked |
-| --- | --- | --- | --- | --- |
-| Promeda Hausverwaltung GmbH | Company history records introduction of Facilioo as a cloud/customer portal in **2020**; continued use in 2026 is not established by this source | Historical reference | [Company history](https://www.promeda.de/ueber-uns/) | 2026-10-23 |
+| Property manager | What the source establishes | Evidence | Compatibility status | Source | Checked |
+| --- | --- | --- | --- | --- | --- |
+| Promeda Hausverwaltung GmbH | Company history records introduction of Facilioo as a cloud/customer portal in **2020**; continued use in 2026 is not established by this source | Historical reference | Unverified | [Company history](https://www.promeda.de/ueber-uns/) | 2026-10-23 |
 
 A provider can change software or operate several different portals at the
 same time. Information from a privacy policy or provider website may remain
@@ -66,9 +94,12 @@ To add or update a provider, open a documentation pull request with a
 **first-party source URL**, the exact product or relationship it describes,
 the source's publication date if available, and the **date you reviewed it**.
 Keep reports of actual integration compatibility separate from publicly
-documented product use. An integration compatibility claim should identify
-the tested release, type of resident account, authentication path, and
-available meter types, **without personal or account-specific details**.
+documented product use. For a status change, link the supporting evidence
+and state its scope. A provider's public Facilioo reference alone is not
+grounds for **Backend confirmed**, **Community tested**, or **Maintainer
+supported**. An integration compatibility report should identify the tested
+release, type of resident account, authentication path, and available meter
+types, **without personal or account-specific details**.
 
 Do **not** include credentials, access tokens, residents' names or addresses,
 meter IDs, screenshots of private portals, unredacted diagnostics, or real
