@@ -34,6 +34,14 @@ anderen White-Label-Apps ist nicht bestätigt, und Anmeldungen mit MFA werden de
 unterstützt. Die verbindlichen technischen Details sowie die
 [Installationsanleitung](#installation) und [Einrichtung](#setup) stehen unten auf Englisch.
 
+## Publicly documented Facilioo portals
+
+Some property managers publicly identify Facilioo as their customer portal or app.
+See [known Facilioo providers and portals](docs/known-facilioo-providers.md) for
+source-backed examples and evidence dates. **Being listed does not mean the
+property manager's accounts work with this integration**: authentication, API
+access, and available consumption meters have not been verified for those portals.
+
 ## Installation
 
 You need **Home Assistant 2026.4.0 or newer** and a **Facilioo resident account** that can
