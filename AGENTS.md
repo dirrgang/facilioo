@@ -10,6 +10,30 @@ This repository provides a community-maintained Home Assistant custom integratio
 - Keep GitHub Issues and PRs as the live coordination surface. Do not introduce or maintain local worklogs, TODO inventories, or parallel task-status registers. Durable technical and user-facing documentation remains in the repository; commits record change-specific context, not a competing backlog.
 - Link related issues and PRs. Close issues only when their stated acceptance criteria are met; unresolved verification must remain visible. If GitHub is temporarily unavailable, use a clearly temporary handoff and synchronize it when access returns.
 
+## Official Facilioo API reference
+
+The integration targets the official Facilioo REST API **v2.0**. For changes to
+API endpoints, authentication, request parameters, pagination, or response
+models, consult Facilioo's first-party documentation before editing code:
+
+- [Developer documentation](https://developers.facilioo.de/)
+- [AI-readable documentation index](https://developers.facilioo.de/llms.txt)
+- [OpenAPI v2 specification](https://api.facilioo.de/swagger/v2.0/swagger.json)
+
+Compare the relevant documented contract with the existing client, models,
+and tests. Distinguish a **confirmed contract mismatch** from a hypothesis or
+previously observed backend behavior; do not assume that published endpoints
+or privileges are available to every resident account or white-label portal.
+Preserve documented behavior unless evidence justifies changing it and add
+fully mocked regression tests for material changes. If the upstream
+documentation cannot be accessed or does not describe the behavior in
+question, state that limitation explicitly instead of inventing a contract.
+
+The published specification is external reference material, not permission
+to send credentials, access tokens, or private resident data to documentation
+sites or third-party test tools. For reproducible schema checks, follow
+[issue #58](https://github.com/dirrgang/home-assistant-facilioo/issues/58).
+
 ## Integration and security boundaries
 
 - Preserve the documented behavior and constraints: monthly billing-derived data is not live telemetry; unverified white-label compatibility must not be presented as established; unsupported MFA must not be bypassed.
