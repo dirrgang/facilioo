@@ -7,17 +7,19 @@ publicly identified Facilioo as a customer portal, branded app, or service
 provider. It helps residents recognize a possible Facilioo-backed portal and
 helps contributors prioritize further compatibility investigations.
 
-**This is not a list of supported integrations or tested accounts.**
-A public reference to Facilioo does **not** establish that a particular
-resident account can authenticate against the regular Facilioo API, exposes
-heating or hot-water meter readings, or is compatible with
-`home-assistant-facilioo`. White-label implementations can differ,
+**This is not a general compatibility guarantee.** Only the specifically
+described MÜNCH Immo App resident-account configuration has been tested by
+the integration maintainer. A public reference to Facilioo does **not**
+establish that another resident account can authenticate against the regular
+Facilioo API, exposes heating or hot-water meter readings, or is compatible
+with `home-assistant-facilioo`. White-label implementations can differ,
 and multi-factor authentication is currently unsupported.
 
 The integration's known working environment is described in the
 [README](../README.md#installation): the regular Facilioo API as observed
-through the MÜNCH Immo App. No other provider listed below has been
-independently tested with this integration.
+through the MÜNCH Immo App. MÜNCH is the only entry below with
+maintainer-tested integration compatibility; every other provider remains
+unverified.
 
 ## Evidence categories
 
@@ -38,8 +40,8 @@ inferred from branding, app listings, privacy policies, or the presence of
 a Facilioo-powered portal.
 
 - **Unverified:** No specific resident-account backend or end-to-end
-  integration compatibility has been verified. This is the default for all
-  listed property managers, including historical references.
+  integration compatibility has been verified. This is the default for
+  entries without account-specific evidence, including historical references.
 - **Backend confirmed:** The property manager or platform provider has
   specifically confirmed relevant resident API, authentication, and/or
   consumption-data behavior for a defined portal. This does **not** establish
@@ -73,9 +75,31 @@ anonymized public report or other verifiable source.
 | Kassenbrock Hausverwaltung | “Kassenbrock HV App powered by facilioo” and customer portal | Branded customer app | Unverified | [App information](https://www.kassenbrock.de/unsere-app/) | 2026-10-23 |
 | KREMER Hausverwaltungen GmbH | Facilioo online portal/app used for customer-data administration | Service disclosure | Unverified | [Customer privacy notice](https://www.kremerhv.de/datenschutzhinweise) | 2026-10-23 |
 | MoVida | “MoVida Mieterportal” provided through a Facilioo platform | Customer portal + service disclosure | Unverified | [Privacy notice](https://movidaliving.de/datenschutzerklaerung/) | 2026-10-23 |
+| MÜNCH Wohnungsverwaltung GmbH (MÜNCH Immobiliengruppe) | “MÜNCH Immo-App”; Facilioo-backed property portal; one maintainer-tested resident-account configuration | Customer portal/app + maintainer test | [Maintainer supported](#maintainer-tested-scope-muench-immo-app) | [Current MÜNCH portal](https://xn--mnch-0ra.de/mein-muench/) · [MÜNCH brochure (2021, p. 16)](https://s9d56e8dc6a45f17f.jimcontent.com/download/version/1629279571/module/16217164024/name/WEG-Broschuere_2021.pdf) | 2026-10-23 |
 | RS Hausverwaltung | Facilioo customer portal; the website also describes a planned transition to Facilioo Neo | Customer portal/app | Unverified | [Customer portal](https://www.rshv.de/kundenportal/) | 2026-10-23 |
 | Strauß & Bock Immobilien | Facilioo customer portal for owners, tenants, and contractors | Customer portal/app | Unverified | [Customer login](https://strauss-bock.de/kundenlogin/) | 2026-10-23 |
 | Wolf-Immobilien-Management GmbH | Facilioo app for tenants and owners | Customer app | Unverified | [Management services](https://www.w-i-m-immobilien.de/verwaltung) | 2026-10-23 |
+
+### Maintainer-tested scope: MÜNCH Immo App
+
+The maintainer developed and has operated this integration with a
+**resident account using the regular Facilioo API through the MÜNCH Immo
+App**, including available monthly heating-energy and warm-water
+consumption data. This is the **Maintainer supported** scope for the
+specific tested configuration, as reflected in the
+[README's compatibility and setup guidance](../README.md#installation).
+
+MÜNCH's [current portal page](https://xn--mnch-0ra.de/mein-muench/)
+identifies the MÜNCH Immo-App. Its [2021 company brochure (page 16)](https://s9d56e8dc6a45f17f.jimcontent.com/download/version/1629279571/module/16217164024/name/WEG-Broschuere_2021.pdf)
+explicitly identifies Facilioo as the underlying property portal.
+The brochure is **historical evidence of the platform relationship**;
+the actual integration use is based on maintainer testing, **not**
+provider-side technical certification or endorsement.
+
+This status does **not** guarantee compatibility with every MÜNCH
+resident account, property, authentication method, or meter setup.
+In particular, the integration does not support MFA challenges.
+No private account details or real consumption readings are published.
 
 ## Historical reference — current use unconfirmed
 
