@@ -1,16 +1,84 @@
 # Home Assistant Facilioo
 
-An unofficial Home Assistant custom integration for monthly heating, hot-water consumption,
-and cost data from [facilioo](https://www.facilioo.de/). It is intended for normal resident accounts
-and may also work with white-label property-management apps whose accounts use the regular Facilioo
-backend. It has been designed from the API behavior observed with the MÜNCH Immo App, but
-compatibility with every Facilioo tenant or white-label app is not guaranteed.
+[**Deutsch: Kurzüberblick**](#auf-deutsch) · [Installation](#installation) · [Energy Dashboard](#energy-dashboard-and-historical-statistics)
 
-This project is independent, community-maintained, and is not affiliated with or endorsed by
-facilioo or MÜNCH.
+Bring **monthly heating energy (kWh), warm-water consumption (m³), and available cost data**
+from your [Facilioo](https://www.facilioo.de/) resident account into Home Assistant.
+The integration exposes current billing-month and cumulative sensors and imports historical
+consumption and costs for the **Home Assistant Energy Dashboard**.
 
-The energy dashboard can then look like this:
-<img width="1706" height="535" alt="grafik" src="https://github.com/user-attachments/assets/7b8a05e1-ea2c-48ed-adfe-54795e8bbeeb" />
+![Example Home Assistant Energy Dashboard showing Facilioo monthly consumption data](https://github.com/user-attachments/assets/7b8a05e1-ea2c-48ed-adfe-54795e8bbeeb)
+
+**What to expect**
+
+- **Energy and water:** Heating energy in kWh and warm water in m³; optional warm-water energy in
+  kWh only when Facilioo supplies complete alternative-unit readings.
+- **Costs and history:** Monthly costs when available, plus historical Recorder statistics for
+  Energy Dashboard consumption and cost views.
+- **Monthly, not live:** Facilioo provides billing/backend readings at monthly resolution, not
+  real-time meter telemetry.
+- **Compatibility:** Home Assistant **2026.4.0+**, a **resident account** with supported meters,
+  and the regular Facilioo API. The integration is based on behavior observed with the
+  **MÜNCH Immo App**; other white-label tenants are not verified. **MFA is not supported.**
+
+This unofficial, community-maintained project is independent of and not endorsed by Facilioo or
+MÜNCH. See [Installation](#installation) and [Setup](#setup) to check whether it fits your account.
+
+## Auf Deutsch
+
+**Facilioo für Home Assistant** importiert monatliche Heizenergie (kWh), Warmwasserverbrauch
+(m³) und – falls vorhanden – Kosten aus einem Facilioo-Bewohnerkonto. Die Daten lassen sich
+einschließlich historischer Werte im Energie-Dashboard verwenden; es handelt sich **nicht um
+Live-Zählerdaten**. Voraussetzung ist Home Assistant **ab 2026.4.0**. Die Kompatibilität mit
+anderen White-Label-Apps ist nicht bestätigt, und Anmeldungen mit MFA werden derzeit nicht
+unterstützt. Die verbindlichen technischen Details sowie die
+[Installationsanleitung](#installation) und [Einrichtung](#setup) stehen unten auf Englisch.
+
+## Installation
+
+You need **Home Assistant 2026.4.0 or newer** and a **Facilioo resident account** that can
+access at least one supported warm-water or heating meter. Accounts that require multi-factor
+authentication (MFA) cannot currently be configured. The integration uses the regular Facilioo
+backend; compatibility with other white-label providers is not guaranteed.
+
+### HACS (recommended)
+
+If you already have HACS installed, open this integration in your Home Assistant instance:
+
+[![Open Facilioo in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=dirrgang&repository=home-assistant-facilioo&category=integration)
+
+This link opens the repository in HACS and can offer to add it as a **custom repository**.
+Facilioo does **not** need to be in the default HACS catalog. You still need to download the
+integration in HACS and restart Home Assistant.
+
+**Fallback: add the custom repository manually**
+
+1. Open **HACS** in Home Assistant and select **⋮ → Custom repositories**.
+2. Enter `https://github.com/dirrgang/home-assistant-facilioo` and choose **Integration**
+   as the repository category.
+3. Add the repository, open **Facilioo** in HACS, and download the integration.
+4. Restart Home Assistant, then follow [Setup](#setup).
+
+### Manual installation
+
+If you do not use HACS, copy `custom_components/facilioo` into the `custom_components`
+directory of your Home Assistant configuration, preserving the directory name, and restart
+Home Assistant. Then follow [Setup](#setup).
+
+## Setup
+
+Go to:
+
+**Settings → Devices & services → Add integration → Facilioo**
+
+Enter the email address and password of the resident account. Setup performs a login and checks
+that at least one supported meter is visible. Credentials are stored only in the Home Assistant
+config entry. Access tokens exist only in memory, are never entities or diagnostics, and are
+discarded on unload.
+
+If Facilioo requires multi-factor authentication, setup stops with an explicit error. The
+integration never asks the backend to skip MFA and currently cannot complete Facilioo's MFA
+challenge because no resident-account challenge flow has been verified.
 
 ## Features
 
@@ -49,37 +117,6 @@ Entities are created only when the corresponding source meter exists:
 
 No cold-water entity is invented. Unknown meter types and units are ignored without preventing
 supported meters from working.
-
-## Installation
-
-Home Assistant 2026.4.0 or newer is required.
-
-### HACS custom repository
-
-1. Open HACS and select **Integrations**.
-2. Open the menu and choose **Custom repositories**.
-3. Add `https://github.com/dirrgang/home-assistant-facilioo` with category **Integration**.
-4. Install **Facilioo** and restart Home Assistant.
-
-### Manual
-
-Copy `custom_components/facilioo` into the `custom_components` directory of your Home Assistant
-configuration, preserving the directory name, and restart Home Assistant.
-
-## Setup
-
-Go to:
-
-**Settings → Devices & services → Add integration → Facilioo**
-
-Enter the email address and password of the resident account. Setup performs a login and checks
-that at least one supported meter is visible. Credentials are stored only in the Home Assistant
-config entry. Access tokens exist only in memory, are never entities or diagnostics, and are
-discarded on unload.
-
-If Facilioo requires multi-factor authentication, setup stops with an explicit error. The
-integration never asks the backend to skip MFA and currently cannot complete Facilioo's MFA
-challenge because no resident-account challenge flow has been verified.
 
 ## Energy Dashboard and historical statistics
 
