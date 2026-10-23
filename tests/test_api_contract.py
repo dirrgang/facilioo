@@ -82,7 +82,7 @@ def test_documented_endpoint_constants_match_reviewed_contract() -> None:
         "search_readings": READINGS_SEARCH_ENDPOINT,
     }
     assert API_VERSION == contract["api_version"] == "2.0"
-    assert BASE_URL == contract["base_url"]
+    assert contract["base_url"] == BASE_URL
     assert set(endpoints) == set(expected)
     for name, path in expected.items():
         assert endpoints[name]["path"] == path
