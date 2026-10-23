@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Water droplet and radiator: unofficial Facilioo integration icon">
+  <!-- Original artwork. Represents water and heating, not an official Facilioo or Home Assistant brand. -->
+  <defs>
+    <linearGradient id="water" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#63E5EB"/>
+      <stop offset="1" stop-color="#21ABC8"/>
+    </linearGradient>
+    <linearGradient id="heat" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFD47D"/>
+      <stop offset="1" stop-color="#FF8A45"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="49" fill="#173747"/>
+  <g transform="translate(0 11)">
+    <path d="M84 57 C71 77 47 111 47 139 A38 38 0 0 0 123 139 C123 111 99 77 84 57 Z" fill="url(#water)"/>
+    <path d="M68 132 C69 120 77 105 84 94" fill="none" stroke="#D4FEFE" stroke-linecap="round" stroke-width="7" opacity="0.82"/>
+    <g stroke="#FFC16C" stroke-width="10" stroke-linecap="round" opacity="0.95">
+      <path d="M144 108 H207"/>
+      <path d="M144 168 H207"/>
+    </g>
+    <g fill="url(#heat)">
+      <rect x="141" y="94" width="15" height="89" rx="7.5"/>
+      <rect x="163" y="94" width="15" height="89" rx="7.5"/>
+      <rect x="185" y="94" width="15" height="89" rx="7.5"/>
+    </g>
+    <g stroke="#FFCF86" stroke-linecap="round" stroke-width="6" fill="none">
+      <path d="M148 81 C139 72 158 65 148 54"/>
+      <path d="M171 81 C161 72 181 65 171 54"/>
+      <path d="M193 81 C183 72 202 65 193 54"/>
+    </g>
+  </g>
+</svg>
