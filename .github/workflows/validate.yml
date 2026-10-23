@@ -18,7 +18,21 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: home-assistant/actions/hassfest@cd6f3635a740c84d8a14f6121a90068b8ece6bf6 # master
+      # The published Hassfest image predates manifest categories. Build the
+      # official validator from a pinned source until the image supports them.
+      - name: Check out Hassfest source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: home-assistant/core
+          ref: e2389ab001bb2b6bf720c23155091ee98de1e62f
+          path: .hassfest-core
+          persist-credentials: false
+      - name: Build Hassfest with manifest category support
+        run: >-
+          docker build --file .hassfest-core/script/hassfest/docker/Dockerfile
+          --tag local/hassfest .hassfest-core
+      - name: Validate integration with Hassfest
+        run: docker run --rm -v "$GITHUB_WORKSPACE:/github/workspace:ro" local/hassfest
 
   hacs:
     runs-on: ubuntu-latest
