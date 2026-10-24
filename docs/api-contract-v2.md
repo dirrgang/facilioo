@@ -1,109 +1,122 @@
-# Facilioo API v2 — contract verification baseline
+# Facilioo API v2 contract verification
 
-**Review date:** 2026-10-24  
+**Review/retrieval date:** 2026-10-24
 **Tracking:** [Issue #58](https://github.com/dirrgang/home-assistant-facilioo/issues/58)
 
-This is a **bounded, offline endpoint/request-contract baseline**, **not** a full
-OpenAPI/schema conformance certification or proof that other white-label
-accounts are compatible. No productive Facilioo account, user-specific data,
-or resident token was used.
+The tests compare the client with a reproducible projection of the official
+[production OpenAPI document](https://api.facilioo.de/swagger/v2.0/swagger.json).
+This completes the bounded specification comparison for the fields the integration
+reads. It does not establish live service behavior or white-label compatibility.
+No resident account or authenticated production request is involved.
 
-## Upstream sources and reproducibility
+## Provenance and reproduction
 
-- [Official Developer Hub](https://developers.facilioo.de/)
-- [Production OpenAPI v2 specification](https://api.facilioo.de/swagger/v2.0/swagger.json)
-- [Authentication](https://developers.facilioo.de/reference/authentication)
-- [Pagination](https://developers.facilioo.de/reference/pagination)
-- Individual official endpoint pages are linked from
-  [the reviewed contract fixture](../tests/fixtures/facilioo_api_v2_contract.json).
+The source identifies itself as **OpenAPI 3.0.1**, `info.version: v2.0` (API version,
+not OpenAPI language version). It publishes no build/revision date; the retrieval
+date and SHA-256 identify the reviewed source precisely. The full source is about
+4.15 MiB and is intentionally kept outside the repository.
 
-The documented endpoints, HTTP methods, login request fields, API version,
-request pagination, and search filter names were checked against the public
-reference pages on the review date. The upstream full Swagger JSON could
-**not be fetched in the review environment**, so no claim is made about
-matching every response DTO field, type, required property, nullability or
-enum. The local fixture is a **human-reviewed subset of documented request
-contracts**; it is not presented as a generated extract or immutable
-snapshot of the upstream OpenAPI file.
+The generated [schema projection](../tests/fixtures/facilioo_openapi_v2.json)
+records the source URL, retrieval date, byte count and SHA-256. The independent
+[request reference fixture](../tests/fixtures/facilioo_api_v2_contract.json)
+records endpoint-page evidence, including pagination rules given in prose.
 
-To fetch the entire current official specification in a development
-environment with network access (optional; **not** required by CI):
+Reproduce the projection with Python and curl in a development environment:
 
 ```sh
-curl --fail --location --show-error \
+curl --fail --location --show-error --max-time 60 \
   https://api.facilioo.de/swagger/v2.0/swagger.json \
   --output /tmp/facilioo-openapi-v2.json
-python -m json.tool /tmp/facilioo-openapi-v2.json >/dev/null
+mise exec -- python scripts/extract_api_contract.py /tmp/facilioo-openapi-v2.json \
+  --retrieved-on 2026-10-24 \
+  --output tests/fixtures/facilioo_openapi_v2.json --check
 ```
 
-Record the upstream version/retrieval date and compare **only the schemas
-used by the integration** before expanding this verification baseline.
-Review the diff manually; do not silently update expectations to follow an
-incompatible upstream change. Do not commit the complete multi-megabyte
-specification or enable network downloads in the normal unit-test CI.
+`--check` compares both content and provenance without writing files. It passes
+only for the pinned source; upstream can change the document without changing its
+API version. To review a newer source, omit `--check`, use its actual retrieval
+date, inspect the diff, and run the checks below. Do not update expectations
+silently to accept incompatible changes.
 
-## Reviewed HTTP and request contracts
+The extractor retains the seven client-used operations, their query parameters,
+JSON request bodies, success response schema references and security declarations.
+It copies types, formats, nullability, required fields and other constraints;
+examples and descriptions are excluded. For response DTOs it projects the fields
+actually consumed by the client. `x-source-required` preserves the **entire original
+required list**, and `x-source-additionalProperties` preserves the original object
+policy, while validation requires only selected fields and allows unread properties.
+Thus the synthetic payloads validate the client projection, not full upstream DTOs.
+Unconsumed login refresh/session/party fields and account profile fields are excluded;
+no large transitive schema graph or generated SDK is needed. Small request and
+pagination schemas are retained in full.
 
-| Endpoint | Method | Client usage | Source |
-| --- | --- | --- | --- |
-| `/api/auth/login` | POST | Email/password login, `skipMultiFactorAuthentication: false` | [Login](https://developers.facilioo.de/reference/post_api-auth-login) |
-| `/api/accounts/myself` | GET | Account-ID fallback | [Get Myself](https://developers.facilioo.de/reference/get_api-accounts-myself) |
-| `/api/consumption-meters` | GET | Paginated meter metadata | [List meters](https://developers.facilioo.de/reference/get_api-consumption-meters) |
-| `/api/consumption-types` | GET | Paginated consumption type metadata | [List types](https://developers.facilioo.de/reference/get_api-consumption-types) |
-| `/api/consumption-readings` | GET | Available in client; not main coordinator sync | [List readings](https://developers.facilioo.de/reference/get_api-consumption-readings) |
-| `/api/consumption-readings-extended` | GET | Available in client; not main coordinator sync | [Extended readings](https://developers.facilioo.de/reference/get_api-consumption-readings-extended) |
-| `/api/consumption-readings/search` | POST | Main sync; `orderBy`, optional `changedSince` and `dates` | [Search readings](https://developers.facilioo.de/reference/post_api-consumption-readings-search) |
+## Reviewed response fields
 
-The official pagination guide documents 1-based `PageNumber`, maximum
-`PageSize = 100`, and the response fields `items`, `totalCount`,
-`totalPages` and `hasNextPage`. GET and POST search requests place
-pagination parameters in the **query string**. The integration sends
-`api-version: 2.0` and uses JWT bearer authentication outside login.
-The search guide describes `changedSince` as matching creations **or**
-modifications since the supplied timestamp; `dates` accepts `YYYY-MM`
-(and optionally a complete year).
+| DTO | Consumed fields and verified constraints |
+| --- | --- |
+| `ConsumptionMeterRead` | Required `id`/`typeId`: int32. Optional nullable `unitOfMeasure`/`number`: strings. |
+| `ConsumptionTypeRead` | Required `id`: int32; `utilityName`: string. Optional nullable `meterName`: string. |
+| `ConsumptionReadingRead` and `ConsumptionReadingExtended` | Required `id`/`consumptionMeterId`: int32; `readingDate`: date-time. Optional nullable `currentValue`, `currentValueInDifferentUnitOfMeasure`, `costs`: double; `isEstimated`: boolean; `deleted`/`lastModified`: date-time. |
+| `LoginCommandResponse` | Required `accessToken`: string; required `account`: `AccountRead` via `allOf`. |
+| `AccountRead` | Required `id`: int32, including the `/accounts/myself` fallback. |
 
-The login reference currently marks `skipMultiFactorAuthentication`
-**deprecated but required**; the integration must continue to send
-`false` unless a reviewed contract change justifies another behavior.
-MFA challenge handling and its dedicated regression tests remain in
-[Issue #49](https://github.com/dirrgang/home-assistant-facilioo/issues/49).
+There are **no enum restrictions on these consumed properties**. Units are nullable
+strings, not an upstream enumeration of KWH/M3. IDs are integers, not an enum of
+known meter types. Tests retain the integration's conservative unknown-type behavior.
+Date-time validation checks RFC 3339 offsets; int32 bounds are enforced by adapting
+the OpenAPI format for the test validator. OpenAPI `nullable` is adapted to JSON
+Schema's null union, including composition where present.
 
-## Automated baseline
+The full reading and extended-reading DTOs agree on all consumed properties.
+The extended percentage-difference properties are not read. Explicit nullable values,
+omitted optional fields, fractional consumption/costs, estimated flags, offset dates,
+modification timestamps and timestamp deletion markers are exercised through the
+existing parsers. No confirmed behaviorally relevant incompatibility was found,
+so this work does not require a runtime change or a separate bug issue.
 
-[Offline contract tests](../tests/test_api_contract.py) use a synthetic
-in-memory HTTP session and the small reviewed JSON fixture. They guard:
-- Documented HTTP methods, endpoint paths and the `api-version` header.
-- Login body fields, **no MFA bypass**, no bearer header on login, and
-  bearer authorization on subsequent requests.
-- 1-based paging, page size 100, and multi-page `hasNextPage` handling.
-- POST search filter names, the documented `YYYY-MM` date format,
-  and timezone-aware conversion of `changedSince` to UTC.
+## Request checks and deliberate defensive behavior
 
-Run locally:
+All seven endpoints are linked to their official reference pages in the request
+fixture. Schema-validated mock sessions cover login and every consumption endpoint,
+including search pagination with a stable body on each page. Tests assert 1-based
+`PageNumber`, `PageSize: 100`, `orderBy: ["readingDate asc"]`, monthly `dates`, UTC
+`changedSince`, the version header and bearer handling. The [pagination guide](https://developers.facilioo.de/reference/pagination)
+gives the 1-based/max-100 constraints; the OpenAPI integer query schemas do not encode
+these bounds. `dates` formats are likewise described in prose, not a schema pattern.
+
+The login request requires `email`, `password` and the deprecated
+`skipMultiFactorAuthentication` boolean. The tests require **false** even though the
+upstream boolean schema also permits true. MFA challenge coverage remains in
+[#49](https://github.com/dirrgang/home-assistant-facilioo/issues/49).
+
+The client intentionally tolerates some shapes beyond the official contract:
+missing login account with `/accounts/myself` fallback, bare lists/alternate page
+wrappers, numeric coercion, and meter label/unit aliases (`meterName`, `typeName`,
+`name`, `description`, `unitOfMeasurement`). These aliases are not properties of the
+published meter DTO and are not presented as verified upstream shapes. Existing
+fallback tests remain separate from schema-valid response tests.
+
+Conversely, the client rejects empty tokens/utility labels, nonpositive account IDs
+and nonfinite numeric values for safe processing. The published primitive schemas
+do not express all these application constraints. Unsupported units/types remain
+unclassified. Error response DTO bodies are not parsed; existing status/error tests
+remain authoritative. These boundaries do not establish additional account access
+or MFA support; white-label verification stays in [#50](https://github.com/dirrgang/home-assistant-facilioo/issues/50).
+
+## Offline validation and maintenance
 
 ```sh
-uv run pytest tests/test_api_contract.py
-uv run ruff check tests/test_api_contract.py
+mise run check
 ```
 
-These tests are **not** live contract probes: they cannot establish whether
-Facilioo changed the production API after the source review date.
+The normal test suite uses only the committed projection and explicitly synthetic
+[response fixtures](../tests/fixtures/facilioo_v2_responses.json). JSON Schema and
+RFC 3339 validation are development dependencies only. Mock sessions have no network
+fallback and fail on unexpected calls; tokens are literal non-JWT test strings.
+Tests also ensure required/type/nullability/format violations fail schema validation,
+and that extraction fails when a selected upstream property disappears.
 
-## Open work in Issue #58
-
-The following remain **unverified against the full OpenAPI v2 schema**:
-- Required/nullable and typed fields for `ConsumptionMeterRead`,
-  `ConsumptionTypeRead`, `ConsumptionReadingRead`, and the extended
-  reading variant.
-- Login/AccountRead response DTOs, optional account identity shapes,
-  and response error-schema details.
-- Whether nullable `currentValue`, monetary `costs`, alternative-unit
-  readings, `deleted`, and `lastModified` have exactly the parser-assumed
-  types and formats in the current upstream specification.
-
-The integration already has independent mock-based model tests for several
-of these behaviors; they are not evidence of a verified upstream schema.
-Expand the contract tests only after checking the actual upstream
-definitions and capturing a **minimal synthetic fixture** for each proven
-variation. Raise separate defects only for demonstrated functional problems.
+Automatic CI downloads would make unrelated changes depend on API availability,
+DNS, upstream edits and rate limits. Therefore source refresh is an explicit reviewed
+development step, while CI stays deterministic and offline. Passing CI checks the
+pinned contract and client, not future upstream drift or real-account compatibility.

@@ -1,0 +1,17 @@
+{
+  "login": {"accessToken": "synthetic-token-not-a-jwt", "account": {"id": 123}},
+  "account": {"id": 123},
+  "meter": {"id": 1, "typeId": 5, "unitOfMeasure": "M3", "number": "SYNTHETIC"},
+  "type": {"id": 5, "meterName": "Warmwasserzähler", "utilityName": "Warmwasser"},
+  "reading": {
+    "id": 10,
+    "consumptionMeterId": 1,
+    "readingDate": "2026-02-01T00:00:00+01:00",
+    "currentValue": 0.75,
+    "currentValueInDifferentUnitOfMeasure": 36.5,
+    "costs": 7.25,
+    "isEstimated": true,
+    "deleted": null,
+    "lastModified": "2026-02-02T10:30:00Z"
+  }
+}

@@ -206,3 +206,290 @@ async def test_has_next_page_contract_fetches_each_page_once() -> None:
     result = await client._paginate(METERS_ENDPOINT, page_size=100)
     assert [item["id"] for item in result] == [1, 2]
     assert [options["params"]["PageNumber"] for _, _, options in session.calls] == [1, 2]
+
+
+# The snapshot projects only properties consumed by this client. Unread required
+# properties are preserved as x-source-required for review, not fabricated in fixtures.
+def _schemas() -> dict[str, Any]:
+    path = Path(__file__).parent / "fixtures" / "facilioo_openapi_v2.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _responses() -> dict[str, Any]:
+    path = Path(__file__).parent / "fixtures" / "facilioo_v2_responses.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _json_schema(value: Any) -> Any:
+    """Adapt OpenAPI 3.0 nullable/int32 semantics for the JSON Schema validator."""
+    if isinstance(value, list):
+        return [_json_schema(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+    result = {key: _json_schema(item) for key, item in value.items() if key != "nullable"}
+    if result.get("format") == "int32":
+        result.update(minimum=-(2**31), maximum=2**31 - 1)
+    if value.get("nullable"):
+        return {"anyOf": [result, {"type": "null"}]}
+    return result
+
+
+def _validate(payload: Any, schema: dict[str, Any]) -> None:
+    from jsonschema import Draft202012Validator, FormatChecker
+
+    document = _json_schema(_schemas())
+    document.update(_json_schema(schema))
+    Draft202012Validator(document, format_checker=FormatChecker()).validate(payload)
+
+
+def _validate_dto(payload: Any, name: str) -> None:
+    _validate(payload, {"$ref": f"#/components/schemas/{name}"})
+
+
+class _ContractSession(_Session):
+    """Validate all requests and responses against the pinned schema, offline."""
+
+    async def request(self, method: str, url: str, **kwargs: Any) -> _Response:
+        operation = _schemas()["paths"][url.removeprefix(BASE_URL)][method.lower()]
+        params = kwargs.get("params") or {}
+        query = {item["name"]: item for item in operation["parameters"] if item["in"] == "query"}
+        assert set(params) <= set(query)
+        for name, value in params.items():
+            _validate(value, query[name]["schema"])
+        if "requestBody" in operation:
+            _validate(
+                kwargs["json"], operation["requestBody"]["content"]["application/json"]["schema"]
+            )
+        if url.endswith(LOGIN_ENDPOINT):
+            assert kwargs["json"]["skipMultiFactorAuthentication"] is False
+            assert "Authorization" not in kwargs["headers"]
+        else:
+            assert kwargs["headers"]["Authorization"] == "Bearer synthetic-token-not-a-jwt"
+        assert kwargs["headers"]["api-version"] == "2.0"
+        response = await super().request(method, url, **kwargs)
+        schema = operation["responses"]["200"]["content"]["application/json"]["schema"]
+        _validate(response.payload, schema)
+        return response
+
+
+def _page(items: list[dict[str, Any]], number: int = 1, total_pages: int = 1) -> dict[str, Any]:
+    return {
+        "items": items,
+        "pageNumber": number,
+        "pageSize": 100,
+        "totalCount": total_pages * len(items),
+        "totalPages": total_pages,
+        "hasNextPage": number < total_pages,
+        "hasPreviousPage": number > 1,
+    }
+
+
+@pytest.mark.parametrize(
+    ("endpoint", "fixture"),
+    [
+        ("async_get_meters", "meter"),
+        ("async_get_consumption_types", "type"),
+        ("async_get_readings", "reading"),
+        ("async_get_extended_readings", "reading"),
+        ("async_search_readings", "reading"),
+    ],
+)
+async def test_schema_valid_responses_reach_parsers_without_skipped_records(
+    endpoint: str, fixture: str
+) -> None:
+    data = _responses()
+    session = _ContractSession([data["login"], _page([data[fixture]])])
+    client = FaciliooApiClient(session, "example@example.invalid", "synthetic-password")
+    assert await client.async_login() == 123
+    parsed = await getattr(client, endpoint)()
+    assert len(parsed) == 1
+    assert parsed[0].id == data[fixture]["id"]
+    assert not session.responses
+
+
+async def test_schema_valid_search_paging_preserves_filters_and_reading_values() -> None:
+    from datetime import UTC
+    from decimal import Decimal
+
+    from custom_components.facilioo.models import ConsumptionReading
+
+    data = _responses()
+    second = {**data["reading"], "id": 11}
+    session = _ContractSession(
+        [data["login"], _page([data["reading"]], 1, 2), _page([second], 2, 2)]
+    )
+    client = FaciliooApiClient(session, "example@example.invalid", "synthetic-password")
+    await client.async_login()
+    readings = await client.async_search_readings(
+        changed_since=datetime(2026, 2, 1, 1, tzinfo=timezone(timedelta(hours=1))),
+        dates=["2026-01"],
+    )
+    assert readings == (
+        ConsumptionReading.from_api(data["reading"]),
+        ConsumptionReading.from_api(second),
+    )
+    reading = readings[0]
+    assert reading.value == Decimal("0.75")
+    assert reading.value_in_different_unit == Decimal("36.5")
+    assert reading.costs == Decimal("7.25")
+    assert reading.reading_date == datetime(2026, 1, 31, 23, tzinfo=UTC)
+    assert reading.last_modified == datetime(2026, 2, 2, 10, 30, tzinfo=UTC)
+    assert reading.is_estimated is True
+    assert reading.deleted is False
+    for page, (_, _, options) in enumerate(session.calls[1:], start=1):
+        assert options["params"] == {"PageNumber": page, "PageSize": 100}
+        assert options["json"] == {
+            "orderBy": ["readingDate asc"],
+            "changedSince": "2026-02-01T00:00:00Z",
+            "dates": ["2026-01"],
+        }
+
+
+@pytest.mark.parametrize("name", ["ConsumptionReadingRead", "ConsumptionReadingExtended"])
+@pytest.mark.parametrize(
+    "field",
+    [
+        "currentValue",
+        "currentValueInDifferentUnitOfMeasure",
+        "costs",
+        "isEstimated",
+        "deleted",
+        "lastModified",
+    ],
+)
+@pytest.mark.parametrize("absent", [False, True])
+def test_nullable_and_omitted_reading_fields_match_schema_and_parser(
+    name: str, field: str, absent: bool
+) -> None:
+    from custom_components.facilioo.models import ConsumptionReading
+
+    payload = _responses()["reading"]
+    if absent:
+        del payload[field]
+    else:
+        payload[field] = None
+    _validate_dto(payload, name)
+    parsed = ConsumptionReading.from_api(payload)
+    attributes = {
+        "currentValue": "value",
+        "currentValueInDifferentUnitOfMeasure": "value_in_different_unit",
+        "costs": "costs",
+        "isEstimated": "is_estimated",
+        "deleted": "deleted",
+        "lastModified": "last_modified",
+    }
+    expected = False if field in {"isEstimated", "deleted"} else None
+    assert getattr(parsed, attributes[field]) is expected
+
+
+@pytest.mark.parametrize("name", ["ConsumptionReadingRead", "ConsumptionReadingExtended"])
+def test_schema_datetime_deletion_marker_is_recognized(name: str) -> None:
+    from custom_components.facilioo.models import ConsumptionReading
+
+    payload = {**_responses()["reading"], "deleted": "2026-03-01T12:00:00Z"}
+    _validate_dto(payload, name)
+    assert ConsumptionReading.from_api(payload).deleted is True
+
+
+@pytest.mark.parametrize("field", ["unitOfMeasure", "number"])
+@pytest.mark.parametrize("absent", [False, True])
+def test_nullable_meter_fields_match_schema_and_parser(field: str, absent: bool) -> None:
+    from custom_components.facilioo.models import ConsumptionMeter, MeterKind
+
+    payload = _responses()["meter"]
+    if absent:
+        del payload[field]
+    else:
+        payload[field] = None
+    _validate_dto(payload, "ConsumptionMeterRead")
+    parsed = ConsumptionMeter.from_api(payload)
+    if field == "unitOfMeasure":
+        assert parsed.unit is None
+        assert parsed.kind is MeterKind.UNKNOWN
+    else:
+        assert parsed.number is None
+
+
+@pytest.mark.parametrize("absent", [False, True])
+def test_nullable_type_name_matches_schema_and_parser(absent: bool) -> None:
+    from custom_components.facilioo.models import ConsumptionType
+
+    payload = _responses()["type"]
+    if absent:
+        del payload["meterName"]
+    else:
+        payload["meterName"] = None
+    _validate_dto(payload, "ConsumptionTypeRead")
+    parsed = ConsumptionType.from_api(payload)
+    assert parsed.meter_name is None
+    assert parsed.utility_name == "Warmwasser"
+
+
+@pytest.mark.parametrize(
+    ("name", "fixture"),
+    [
+        ("ConsumptionMeterRead", "meter"),
+        ("ConsumptionTypeRead", "type"),
+        ("ConsumptionReadingRead", "reading"),
+        ("ConsumptionReadingExtended", "reading"),
+        ("LoginCommandResponse", "login"),
+        ("AccountRead", "account"),
+    ],
+)
+def test_response_contract_enforces_required_types_nullability_and_formats(
+    name: str, fixture: str
+) -> None:
+    from jsonschema import ValidationError
+
+    payload = _responses()[fixture]
+    schema = _schemas()["components"]["schemas"][name]
+    _validate_dto(payload, name)
+    for field in schema["required"]:
+        without = {key: value for key, value in payload.items() if key != field}
+        with pytest.raises(ValidationError):
+            _validate_dto(without, name)
+    for field, constraints in schema["properties"].items():
+        # Arrays are invalid for every selected response field (including account).
+        with pytest.raises(ValidationError):
+            _validate_dto({**payload, field: []}, name)
+        if not constraints.get("nullable"):
+            with pytest.raises(ValidationError):
+                _validate_dto({**payload, field: None}, name)
+        if constraints.get("format") == "date-time":
+            for invalid in ["2026-01-01", "2026-01-01T00:00:00", "invalid"]:
+                with pytest.raises(ValidationError):
+                    _validate_dto({**payload, field: invalid}, name)
+        if constraints.get("format") == "int32":
+            for invalid in [True, "123", 2**31, -(2**31) - 1]:
+                with pytest.raises(ValidationError):
+                    _validate_dto({**payload, field: invalid}, name)
+
+
+def test_account_response_schema_and_defensive_identity_fallback() -> None:
+    data = _responses()
+    _validate_dto(data["account"], "AccountRead")
+    assert FaciliooApiClient._extract_account_id(data["account"]) == 123
+    assert FaciliooApiClient._extract_account_id(data["login"]) == 123
+    for invalid in [True, "123", 0, -1, None]:
+        assert FaciliooApiClient._extract_account_id({"id": invalid}) is None
+
+
+def test_extractor_reproduces_snapshot_and_rejects_missing_consumed_fields() -> None:
+    from scripts.extract_api_contract import extract
+
+    snapshot = _schemas()
+    # Build a small source-shaped input from the projection to test the extractor
+    # offline. Reproduction from the exact full upstream bytes is a documented
+    # optional command; CI never needs that multi-megabyte file or network access.
+    source = {**_schemas(), "info": {"version": "v2.0"}}
+    for schema in source["components"]["schemas"].values():
+        if "x-source-required" in schema:
+            schema["required"] = schema["x-source-required"]
+            schema["additionalProperties"] = schema["x-source-additionalProperties"]
+    raw = json.dumps(source).encode()
+    result = extract(raw, "2026-10-24")
+    assert result["paths"] == snapshot["paths"]
+    assert result["components"] == snapshot["components"]
+    del source["components"]["schemas"]["ConsumptionReadingRead"]["properties"]["costs"]
+    with pytest.raises(KeyError):
+        extract(json.dumps(source).encode(), "2026-10-24")
