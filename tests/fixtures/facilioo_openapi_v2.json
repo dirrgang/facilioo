@@ -1,0 +1,982 @@
+{
+  "components": {
+    "schemas": {
+      "AccountRead": {
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "format": "int32",
+            "readOnly": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object",
+        "x-source-additionalProperties": false,
+        "x-source-required": [
+          "colorId",
+          "groupId",
+          "hasRepresentationViewForAllAccounts",
+          "id",
+          "isPartyAdministrator",
+          "isSupervisor",
+          "themeMode"
+        ]
+      },
+      "ConsumptionMeterRead": {
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "format": "int32",
+            "readOnly": true,
+            "type": "integer"
+          },
+          "number": {
+            "nullable": true,
+            "type": "string"
+          },
+          "typeId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "unitOfMeasure": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "typeId"
+        ],
+        "type": "object",
+        "x-source-additionalProperties": false,
+        "x-source-required": [
+          "creatorPartyId",
+          "excludeExport",
+          "id",
+          "tenantId",
+          "typeId"
+        ]
+      },
+      "ConsumptionReadingExtended": {
+        "additionalProperties": true,
+        "properties": {
+          "consumptionMeterId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "costs": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "currentValue": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "currentValueInDifferentUnitOfMeasure": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "deleted": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "format": "int32",
+            "readOnly": true,
+            "type": "integer"
+          },
+          "isEstimated": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "lastModified": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "readingDate": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "consumptionMeterId",
+          "id",
+          "readingDate"
+        ],
+        "type": "object",
+        "x-source-additionalProperties": false,
+        "x-source-required": [
+          "consumptionMeterId",
+          "id",
+          "readerAccountId",
+          "readingDate",
+          "wasChecked",
+          "wasDelivered"
+        ]
+      },
+      "ConsumptionReadingRead": {
+        "additionalProperties": true,
+        "properties": {
+          "consumptionMeterId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "costs": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "currentValue": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "currentValueInDifferentUnitOfMeasure": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "deleted": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "format": "int32",
+            "readOnly": true,
+            "type": "integer"
+          },
+          "isEstimated": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "lastModified": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "readingDate": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "consumptionMeterId",
+          "id",
+          "readingDate"
+        ],
+        "type": "object",
+        "x-source-additionalProperties": false,
+        "x-source-required": [
+          "consumptionMeterId",
+          "id",
+          "readerAccountId",
+          "readingDate",
+          "wasChecked",
+          "wasDelivered"
+        ]
+      },
+      "ConsumptionReadingSearchRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "changedSince": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "consumptionMeterId": {
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "createdFrom": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdUntil": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "dates": {
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "ids": {
+            "items": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "lastModifiedFrom": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "lastModifiedUntil": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "orderBy": {
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "searchTerm": {
+            "nullable": true,
+            "type": "string"
+          },
+          "unitId": {
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "ConsumptionTypeRead": {
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "format": "int32",
+            "readOnly": true,
+            "type": "integer"
+          },
+          "meterName": {
+            "nullable": true,
+            "type": "string"
+          },
+          "utilityName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "utilityName"
+        ],
+        "type": "object",
+        "x-source-additionalProperties": false,
+        "x-source-required": [
+          "id",
+          "style",
+          "utilityName"
+        ]
+      },
+      "LoginCommandResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "account": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AccountRead"
+              }
+            ]
+          }
+        },
+        "required": [
+          "accessToken",
+          "account"
+        ],
+        "type": "object",
+        "x-source-additionalProperties": false,
+        "x-source-required": [
+          "accessToken",
+          "account",
+          "refreshToken"
+        ]
+      },
+      "LoginRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "skipMultiFactorAuthentication": {
+            "default": false,
+            "deprecated": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "skipMultiFactorAuthentication"
+        ],
+        "type": "object"
+      },
+      "PaginatedListOfConsumptionMeterRead": {
+        "additionalProperties": false,
+        "properties": {
+          "hasNextPage": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ConsumptionMeterRead"
+            },
+            "type": "array"
+          },
+          "pageNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "pageSize": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "totalCount": {
+            "format": "int32",
+            "readOnly": true,
+            "type": "integer"
+          },
+          "totalPages": {
+            "format": "int32",
+            "readOnly": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "hasNextPage",
+          "hasPreviousPage",
+          "items",
+          "pageNumber",
+          "pageSize",
+          "totalCount",
+          "totalPages"
+        ],
+        "type": "object"
+      },
+      "PaginatedListOfConsumptionReadingExtended": {
+        "additionalProperties": false,
+        "properties": {
+          "hasNextPage": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ConsumptionReadingExtended"
+            },
+            "type": "array"
+          },
+          "pageNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "pageSize": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "totalCount": {
+            "format": "int32",
+            "readOnly": true,
+            "type": "integer"
+          },
+          "totalPages": {
+            "format": "int32",
+            "readOnly": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "hasNextPage",
+          "hasPreviousPage",
+          "items",
+          "pageNumber",
+          "pageSize",
+          "totalCount",
+          "totalPages"
+        ],
+        "type": "object"
+      },
+      "PaginatedListOfConsumptionReadingRead": {
+        "additionalProperties": false,
+        "properties": {
+          "hasNextPage": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ConsumptionReadingRead"
+            },
+            "type": "array"
+          },
+          "pageNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "pageSize": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "totalCount": {
+            "format": "int32",
+            "readOnly": true,
+            "type": "integer"
+          },
+          "totalPages": {
+            "format": "int32",
+            "readOnly": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "hasNextPage",
+          "hasPreviousPage",
+          "items",
+          "pageNumber",
+          "pageSize",
+          "totalCount",
+          "totalPages"
+        ],
+        "type": "object"
+      },
+      "PaginatedListOfConsumptionTypeRead": {
+        "additionalProperties": false,
+        "properties": {
+          "hasNextPage": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ConsumptionTypeRead"
+            },
+            "type": "array"
+          },
+          "pageNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "pageSize": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "totalCount": {
+            "format": "int32",
+            "readOnly": true,
+            "type": "integer"
+          },
+          "totalPages": {
+            "format": "int32",
+            "readOnly": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "hasNextPage",
+          "hasPreviousPage",
+          "items",
+          "pageNumber",
+          "pageSize",
+          "totalCount",
+          "totalPages"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "openapi": "3.0.1",
+  "paths": {
+    "/api/accounts/myself": {
+      "get": {
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Accept-Language",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "api-version",
+            "schema": {
+              "default": "2.0",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountRead"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountRead"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountRead"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Accept-Language",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "api-version",
+            "schema": {
+              "default": "2.0",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/*+json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/LoginRequest"
+                  }
+                ]
+              }
+            },
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/LoginRequest"
+                  }
+                ]
+              }
+            },
+            "text/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/LoginRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginCommandResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginCommandResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginCommandResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/consumption-meters": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "PageSize",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "PageNumber",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "SortByAttributeName",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "AscendingOrder",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Accept-Language",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "api-version",
+            "schema": {
+              "default": "2.0",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedListOfConsumptionMeterRead"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/api/consumption-readings": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "PageSize",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "PageNumber",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "SortByAttributeName",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "AscendingOrder",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Accept-Language",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "api-version",
+            "schema": {
+              "default": "2.0",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedListOfConsumptionReadingRead"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/api/consumption-readings-extended": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "PageSize",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "PageNumber",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Accept-Language",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "api-version",
+            "schema": {
+              "default": "2.0",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedListOfConsumptionReadingExtended"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedListOfConsumptionReadingExtended"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedListOfConsumptionReadingExtended"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/api/consumption-readings/search": {
+      "post": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "PageSize",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "PageNumber",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Accept-Language",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "api-version",
+            "schema": {
+              "default": "2.0",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ConsumptionReadingSearchRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedListOfConsumptionReadingRead"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/api/consumption-types": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "PageSize",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "PageNumber",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "SortByAttributeName",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "AscendingOrder",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Accept-Language",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "api-version",
+            "schema": {
+              "default": "2.0",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedListOfConsumptionTypeRead"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    }
+  },
+  "provenance": {
+    "bytes": 4354131,
+    "retrieved_on": "2026-10-24",
+    "scope": "Client-used response fields, request schemas and pagination; not full DTOs",
+    "sha256": "d3c667099c5c70b9598d53d53ebd55269c017ab665ed28565a5bcb0b52d1bd65",
+    "upstream_info_version": "v2.0",
+    "url": "https://api.facilioo.de/swagger/v2.0/swagger.json"
+  }
+}

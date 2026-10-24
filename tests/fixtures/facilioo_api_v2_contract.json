@@ -1,0 +1,75 @@
+{
+  "reviewed_on": "2026-10-24",
+  "verification": "Official endpoint pages and pagination/authentication guides, not a full OpenAPI DTO schema comparison",
+  "full_openapi_url": "https://api.facilioo.de/swagger/v2.0/swagger.json",
+  "base_url": "https://api.facilioo.de",
+  "api_version": "2.0",
+  "pagination": {
+    "first_page": 1,
+    "max_page_size": 100,
+    "request_query": [
+      "PageSize",
+      "PageNumber"
+    ],
+    "response_fields": [
+      "items",
+      "pageNumber",
+      "totalPages",
+      "totalCount",
+      "hasPreviousPage",
+      "hasNextPage"
+    ]
+  },
+  "endpoints": {
+    "login": {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "reference": "https://developers.facilioo.de/reference/post_api-auth-login",
+      "required_body": [
+        "email",
+        "password",
+        "skipMultiFactorAuthentication"
+      ]
+    },
+    "myself": {
+      "method": "GET",
+      "path": "/api/accounts/myself",
+      "reference": "https://developers.facilioo.de/reference/get_api-accounts-myself"
+    },
+    "meters": {
+      "method": "GET",
+      "path": "/api/consumption-meters",
+      "reference": "https://developers.facilioo.de/reference/get_api-consumption-meters",
+      "paginated": true
+    },
+    "consumption_types": {
+      "method": "GET",
+      "path": "/api/consumption-types",
+      "reference": "https://developers.facilioo.de/reference/get_api-consumption-types",
+      "paginated": true
+    },
+    "readings": {
+      "method": "GET",
+      "path": "/api/consumption-readings",
+      "reference": "https://developers.facilioo.de/reference/get_api-consumption-readings",
+      "paginated": true
+    },
+    "extended_readings": {
+      "method": "GET",
+      "path": "/api/consumption-readings-extended",
+      "reference": "https://developers.facilioo.de/reference/get_api-consumption-readings-extended",
+      "paginated": true
+    },
+    "search_readings": {
+      "method": "POST",
+      "path": "/api/consumption-readings/search",
+      "reference": "https://developers.facilioo.de/reference/post_api-consumption-readings-search",
+      "paginated": true,
+      "documented_body_fields": [
+        "orderBy",
+        "changedSince",
+        "dates"
+      ]
+    }
+  }
+}
